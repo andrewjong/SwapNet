@@ -4,9 +4,9 @@ A general framework for GAN training.
 from argparse import ArgumentParser
 from abc import ABC, abstractmethod
 
-import modules
 import optimizers
 from models import BaseModel
+import modules.loss
 from modules.discriminators import Discriminator
 
 
@@ -41,11 +41,13 @@ class BaseGAN(BaseModel, ABC):
             parser.add_argument(
                 "--optimizer_G",
                 help="optimizer for generator",
+                default="AdamW",
                 choices=("AdamW", "AdaBound"),
             )
             parser.add_argument(
                 "--optimizer_D",
                 help="optimizer for discriminator",
+                default="AdamW",
                 choices=("AdamW", "AdaBound"),
             )
             return parser
@@ -54,7 +56,7 @@ class BaseGAN(BaseModel, ABC):
         """
         Sets the generator, discriminator, and optimizers.
 
-        Sets self.generator to the return value of self.define_G()
+        Sets self.net_generator to the return value of self.define_G()
 
         Args:
             opt:
@@ -66,10 +68,11 @@ class BaseGAN(BaseModel, ABC):
             self.net_discriminator = Discriminator(
                 in_channels=self.get_D_inchannels(), img_size=self.opt.crop_size
             )
+            self.model_names = ["generator", "discriminator"]
 
             # setup GAN loss
             self.criterion_GAN = modules.loss.GANLoss(opt.gan_mode).to(self.device)
-            self.loss_names = ("D", "D_real", "D_fake", "D_gp", "G")
+            self.loss_names = ("D", "D_real", "D_fake", "D_gp", "G", "G_gan")
 
             # Define optimizers
             self.optimizer_G = optimizers.define_optimizer(
@@ -92,7 +95,7 @@ class BaseGAN(BaseModel, ABC):
     def define_G(self):
         """
         Return the generator module. Called in init()
-        The returned value is set to self.generator().
+        The returned value is set to self.net_generator().
         """
         pass
 

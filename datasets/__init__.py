@@ -30,6 +30,11 @@ def find_dataset_using_name(dataset_name):
 
     return dataset
 
+def get_options_modifier(dataset_name):
+    """Return the static method <modify_commandline_options> of the dataset class."""
+    dataset_class = find_dataset_using_name(dataset_name)
+    return dataset_class.modify_commandline_options
+
 
 def create_dataset(opt):
     """Create a dataset given the option.
@@ -62,7 +67,7 @@ class CappedDataLoader:
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,
-            shuffle=opt.shuffle,
+            shuffle=opt.shuffle_data,
             num_workers=opt.num_threads,
         )
 
@@ -83,6 +88,8 @@ def get_transforms(opt):
     Return Composed torchvision transforms based on specified arguments.
     """
     transforms_list = []
+    if "none" in opt.input_transforms:
+        return
     every = "all" in opt.input_transforms
 
     if every or "v_flip" in opt.input_transforms:

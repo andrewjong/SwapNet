@@ -30,13 +30,19 @@ class BaseModel(ABC):
         """
         self.opt = opt
         self.gpu_id = opt.gpu_id
-        self.is_train = opt.isTrain
+        self.is_train = opt.is_train
         self.device = (
             torch.device(f"cuda:{self.gpu_id}") if self.gpu_id else torch.device("cpu")
         )  # get device name: CPU or GPU
         self.save_dir = os.path.join(
             opt.checkpoints_dir, opt.name
         )  # save all the checkpoints to save_dir
+        try:
+            os.makedirs(self.save_dir)
+        except FileExistsError as e:
+            a = input(f"The experiment directory {self.save_dir} already exists. Are you sure you want to continue? (y/N): ")
+            if a.lower().strip() != "y":
+                raise e
         if (
             True
         ):  # opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
@@ -86,15 +92,17 @@ class BaseModel(ABC):
         # if self.is_train:
         #     self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
         if not self.is_train or opt.continue_train:
-            load_suffix = "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.epoch
+            load_suffix = "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
             self.load_checkpoint(load_suffix)
+        else:
+            opt.from_epoch = 0
         self.print_networks(opt.verbose)
 
     def eval(self):
         """Make models eval mode during test time"""
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, "net" + name)
+                net = getattr(self, "net_" + name)
                 net.eval()
 
     def test(self):
@@ -204,7 +212,7 @@ class BaseModel(ABC):
         print("---------- Networks initialized -------------")
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, "net" + name)
+                net = getattr(self, "net_" + name)
                 num_params = 0
                 for param in net.parameters():
                     num_params += param.numel()

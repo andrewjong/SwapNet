@@ -8,7 +8,7 @@ from models.base_gan import BaseGAN
 from modules.swapnet_modules import WarpModule
 
 
-class WarpModel(BaseModel, BaseGAN):
+class WarpModel(BaseGAN):
     """
     Implements training steps of the SwapNet Texture Module.
     """
@@ -21,8 +21,8 @@ class WarpModel(BaseModel, BaseGAN):
         """
         if is_train:
             parser.add_argument("--warp_mode", choices=("gan", "ce"))
-        # TODO. this line is going to add GAN options regardless right? how do we prevent that
-        parser = super().modify_commandline_options(parser, is_train)
+        # https://stackoverflow.com/questions/26788214/super-and-staticmethod-interaction
+        parser = super(WarpModel, WarpModel).modify_commandline_options(parser, is_train)
         return parser
 
     def __init__(self, opt):
@@ -31,25 +31,29 @@ class WarpModel(BaseModel, BaseGAN):
         Args:
             opt:
         """
-        # whether we're going to use GAN for training warp or not
-        if opt.warp_mode == "gan":
-            BaseGAN.__init__(self, opt)
-        else:
-            BaseModel.__init__(self, opt)
-            self.generator = self.define_G()
+        self.body_channels = opt.body_channels if opt.body_representation == "labels" else 3 # 3 for RGB
+        self.cloth_channels = opt.cloth_channels if opt.cloth_representation == "labels" else 3 # 3 for RGB
+
+        BaseGAN.__init__(self, opt)
+
 
         if self.is_train:
             # we use cross entropy loss in both
             self.criterion_CE = nn.CrossEntropyLoss()
-            if opt.warp_mode == "gan":
-                self.loss_names = super().loss_names + ("G_gan", "G_ce")
+            if opt.warp_mode != "gan":
+                # remove discriminator related things
+                self.model_names = ["generator"]
+                self.loss_names = ("G")
+                del self.net_discriminator
+                del self.optimizer_D
+                self.optimizer_names = ["G"]
 
     def define_G(self):
         """
         The generator is the Warp Module.
         """
         return WarpModule(
-            body_channels=self.opt.body_channels, cloth_channels=self.opt.cloth_channels
+            body_channels=self.body_channels, cloth_channels=self.cloth_channels
         )
 
     def get_D_inchannels(self):
@@ -57,7 +61,7 @@ class WarpModel(BaseModel, BaseGAN):
         The discriminator is deciding between cloth segmentations, so we return number
         of cloth channels.
         """
-        return self.opt.cloth_channels
+        return self.cloth_channels
 
     def set_input(self, input):
         bodys, inputs, targets = input
@@ -66,7 +70,7 @@ class WarpModel(BaseModel, BaseGAN):
         self.targets = targets
 
     def forward(self):
-        self.fakes = self.generator(self.bodys, self.inputs)
+        self.fakes = self.net_generator(self.bodys, self.inputs)
 
     def backward_G(self):
         """
@@ -102,6 +106,7 @@ class WarpModel(BaseModel, BaseGAN):
             # will optimize both D and G
             super().optimize_parameters()
         else:
+            self.forward()
             # optimize G only
             self.optimizer_G.zero_grad()
             self.backward_G()

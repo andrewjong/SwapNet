@@ -34,7 +34,7 @@ def adabound_modifier(parser: ArgumentParser, *_):
     return parser
 
 
-def define_optimizer(opt, net: str, parameters) -> torch.optim.Optimizer:
+def define_optimizer(parameters, opt, net: str) -> torch.optim.Optimizer:
     """
     Return an initialized Optimizer class
     :param opt:
@@ -43,7 +43,7 @@ def define_optimizer(opt, net: str, parameters) -> torch.optim.Optimizer:
     :return:
     """
     # check whether optimizer_G or optimizer_D
-    if net != "D" or net != "G":
+    if net != "D" and net != "G":
         raise ValueError(f"net arg must be 'D' or 'G', received {net}")
     arg = "optimizer_" + net
     choice = getattr(opt, arg)

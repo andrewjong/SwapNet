@@ -23,11 +23,17 @@ class BaseOptions:
             help="load arguments from a json file instead of command line",
         )
         parser.add_argument(
-            "--name", help="name of the experiment, determines where things are saved"
+            "--name", default="my_experiment", help="name of the experiment, determines where things are saved"
+        )
+        parser.add_argument(
+            "--verbose", action="store_true"
+        )
+        parser.add_argument(
+            "--print_freq", default=256, help="batch frequency to print"
         )
         # == MODEL INIT / LOADING / SAVING ==
         parser.add_argument(
-            "--model", help="which model to run", choices=("warp", "texture")
+            "--model", help="which model to run", choices=("warp", "texture"), required=True
         )
         parser.add_argument(
             "--checkpoints_dir", default="./checkpoints", help="Where to save models"
@@ -38,6 +44,7 @@ class BaseOptions:
         # == DATA / IMAGE LOADING ==
         parser.add_argument(
             "--dataroot",
+            required=True,
             help="path to data, should contain 'cloth/', 'body/', 'texture/', "
             "'rois.csv'",
         )
@@ -99,7 +106,7 @@ class BaseOptions:
         parser.add_argument(
             "--input_transforms",
             nargs="+",
-            choices=("h_flip", "v_flip", "affine", "perspective", "all"),
+            choices=("none", "h_flip", "v_flip", "affine", "perspective", "all"),
             help="what random transforms to perform on the input ('all' for all transforms)",
         )
         # == ITERATION PROPERTIES ==
@@ -120,7 +127,7 @@ class BaseOptions:
             type=int,
             help="number of CPU threads for data loading",
         )
-        parser.add_argument("--gpu_id", type=int, help="gpu id to use. -1 for cpu")
+        parser.add_argument("--gpu_id", default=0, type=int, help="gpu id to use. -1 for cpu")
 
         self._parser = parser
         self.is_train = None
@@ -134,17 +141,22 @@ class BaseOptions:
 
         # basic options
         opt, _ = parser.parse_known_args()
-        opt.dataset = opt.model
+        parser.set_defaults(dataset=opt.model)
 
         # modify options for each arg that can do so
-        for arg in ["model", "dataset", "optimizer_D", "optimizer_G"]:
+        modifiers = ["model", "dataset", "optimizer_D"]
+        for arg in modifiers:
             # becomes model(s), dataset(s), optimizer(s)
             import_source = eval(arg.split("_")[0] + "s")
             # becomes e.g. opt.model, opt.dataset, opt.optimizer
             name = getattr(opt, arg)
             options_modifier = import_source.get_options_modifier(name)
             parser = options_modifier(parser, self.is_train)
-            opt, _ = parser.parse_known_args
+            opt, _ = parser.parse_known_args()
+            # hacky, add optimizer G params if different from opt_D
+            if arg is "optimizer_D" and opt.optimizer_D != opt.optimizer_G: 
+                modifiers.append("optimizer_G")
+
 
         self._parser = parser
         final_opt = self._parser.parse_args()
@@ -154,8 +166,10 @@ class BaseOptions:
         opt = self.gather_options()
         opt.is_train = self.is_train
 
+
         if opt.gpu_id > 0:
             torch.cuda.set_device(opt.gpu_id)
             torch.backends.cudnn.benchmark = True
 
         self.opt = opt
+        return opt

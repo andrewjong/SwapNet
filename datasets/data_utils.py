@@ -20,15 +20,21 @@ IMG_EXTENSIONS = [
     ".PPM",
     ".bmp",
     ".BMP",
+]
+NP_EXTENSIONS = [
     ".npz",  # numpy compressed
 ]
+
 
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
+def in_extensions(filename, extensions):
+    return any(filename.endswith(extension) for extension in extensions)
 
-def find_valid_files(dir, max_dataset_size=float("inf")):
+
+def find_valid_files(dir, extensions, max_dataset_size=float("inf")):
     """
     Get all the images recursively under a dir.
     Args:
@@ -43,7 +49,7 @@ def find_valid_files(dir, max_dataset_size=float("inf")):
 
     for root, _, fnames in sorted(os.walk(dir)):
         for fname in fnames:
-            if is_image_file(fname):
+            if in_extensions(fname, extensions):
                 path = os.path.join(root, fname)
                 images.append(path)
     return images[: min(max_dataset_size, len(images))]
@@ -78,8 +84,8 @@ def remove_top_dir(dir, n=1):
     Returns:
 
     """
-    parts = os.path.split(dir)
-    top_removed = os.path.sep.join(parts[n:])
+    parts = dir.split(os.path.sep)
+    top_removed = os.path.sep.join(parts[n+1:])
     return top_removed
 
 
@@ -206,7 +212,11 @@ def decompress_cloth_segment(fname, n_labels) -> Tensor:
     Load cloth segmentation sparse matrix npz file and output a one hot tensor.
     :return: tensor of size(H,W,n_labels)
     """
-    data_sparse = load_npz(fname)
+    try:
+        data_sparse = load_npz(fname)
+    except Exception as e:
+        print("Could not decompress cloth segment:", fname)
+        raise e
     return to_onehot_tensor(data_sparse, n_labels)
 
 

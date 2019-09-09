@@ -13,12 +13,13 @@ class TextureModel(BaseGAN):
     """
     @staticmethod
     def modify_commandline_options(parser: ArgumentParser, is_train):
-        parser = super().modify_commandline_options(parser, is_train)
+        parser = super(TextureModel, TextureModel).modify_commandline_options(parser, is_train)
         if is_train:
             parser.add_argument("--lambda_l1", help="weight for L1 loss in final term")
             parser.add_argument(
                 "--lambda_feat", help="weight for feature loss in final term"
             )
+        return parser
 
     def __init__(self, opt):
         super().__init__(opt)
@@ -30,7 +31,7 @@ class TextureModel(BaseGAN):
                 self.device
             )
 
-            self.loss_names = super().loss_names + ("G_gan", "G_l1", "G_feature")
+            self.loss_names = self.loss_names + ("G_l1", "G_feature")
 
     def get_D_inchannels(self):
         return self.opt.texture_channels

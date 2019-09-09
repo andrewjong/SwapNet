@@ -22,12 +22,14 @@ class WarpDataset(BaseDataset):
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
-        parser.set_defaults(
-            input_transforms=("h_flip", "v_flip", "affine", "perspective")
-        )
+        if is_train:
+            parser.set_defaults(
+                input_transforms=("h_flip", "v_flip", "affine", "perspective")
+            )
         parser.add_argument(
             "--per_channel_transform",
             action="store_true",
+            default=True, # TODO: make this a toggle based on if data is RGB or labels
             help="Perform the transform for each label instead of on the image as a "
             "whole. --cloth_representation must be 'labels'.",
         )
@@ -37,10 +39,12 @@ class WarpDataset(BaseDataset):
         super().__init__(opt)
 
         self.cloth_dir = os.path.join(opt.dataroot, "cloth")
-        self.cloth_files = find_valid_files(self.cloth_dir)
+        extensions = [".npz"] if self.opt.cloth_representation is "labels" else None
+        print("Extensions:", extensions)
+        self.cloth_files = find_valid_files(self.cloth_dir, extensions)
         self.body_dir = os.path.join(opt.dataroot, "body")
 
-        self.crop_bounds = eval(opt.crop_bounds)
+        self.crop_bounds = eval(opt.crop_bounds) if opt.crop_bounds else None
         self.input_transform = get_transforms(opt)
 
     def __len__(self):
@@ -57,12 +61,12 @@ class WarpDataset(BaseDataset):
         target_cloth_tensor = decompress_cloth_segment(
             cloth_file, self.opt.cloth_channels
         )
-        if self.opt.data_mode == "image":
+        if self.opt.dataset_mode == "image":
             # in image mode, the input cloth is the same as the target cloth
             input_cloth_tensor = target_cloth_tensor.clone()
-        elif self.opt.data_mode == "video":
+        elif self.opt.dataset_mode == "video":
             # video mode, can choose a random image
-            input_file = random.randint(0, len(self))
+            input_file = self.cloth_files[random.randint(0, len(self))]
             input_cloth_tensor = decompress_cloth_segment(
                 input_file, self.opt.cloth_channels
             )
@@ -81,6 +85,7 @@ class WarpDataset(BaseDataset):
         if self.opt.per_channel_transform:
             return per_channel_transform(cloth_tensor, self.input_transform)
         else:
+            raise NotImplementedError("Sorry, per_channel_transform must be true")
             return self.input_transform(cloth_tensor)
 
     def __getitem__(self, index):
@@ -110,8 +115,15 @@ class WarpDataset(BaseDataset):
         return body_tensor, input_cloth_tensor, target_cloth_tensor
 
 
-def get_corresponding_file(original, target_dir):
-    target_ext = get_dir_file_extension(target_dir)
-    target_file = os.path.join(target_dir, remove_top_dir(original))
+def get_corresponding_file(original, target_dir, target_ext=None):
+    # number of top dir to replace
+    num_top_parts = len(os.path.split(target_dir))
+    # replace the top dirs
+    top_removed = remove_top_dir(original, num_top_parts)
+    target_file = os.path.join(target_dir, top_removed)
+    # extension of files in the target dir
+    if not target_ext:
+        target_ext = get_dir_file_extension(target_dir)
+    # change the extension
     target_file = remove_extension(target_file) + target_ext
     return target_file
