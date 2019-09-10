@@ -76,10 +76,10 @@ class BaseOptions:
         )
         parser.add_argument(
             "--body_channels",
-            default=6,
+            default=12,
             type=int,
             help="only used if --body_representation == 'labels'. body segmentation "
-            "number of channels",
+            "number of channels. Use 12 for neural body fitting output",
         )
         parser.add_argument(
             "--texture_channels",

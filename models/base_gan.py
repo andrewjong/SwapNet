@@ -22,8 +22,8 @@ class BaseGAN(BaseModel, ABC):
             parser.add_argument(
                 "--gan_mode",
                 help="gan regularization to use",
-                default="meschder_r1",
-                choices=("vanilla", "wgangp", "dragan", "mescheder_r1", "mescheder_r2"),
+                default="vanilla",
+                choices=("vanilla", "wgan-gp", "dragan", "mescheder-r1", "mescheder-r2"),
             )
             parser.add_argument(
                 "--lambda_gan",
@@ -122,14 +122,14 @@ class BaseGAN(BaseModel, ABC):
         self.loss_D_real = self.criterion_GAN(pred_real, True)
         # calculate gradient penalty
         self.loss_D_gp = modules.loss.gradient_penalty(
-            self.net_discriminator, self.targets, self.fake, self.opt.gan_mode
+            self.net_discriminator, self.targets, self.fakes, self.opt.gan_mode
         )
         # final loss
         self.loss_D = (
             0.5 * (self.loss_D_fake + self.loss_D_real)
             + self.opt.lambda_gp * self.loss_D_gp
         )
-        self.loss_D.backwards()
+        self.loss_D.backward()
 
     @abstractmethod
     def backward_G(self):

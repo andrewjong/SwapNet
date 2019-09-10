@@ -35,7 +35,7 @@ class GANLoss(nn.Module):
             self.loss = nn.MSELoss()
         elif gan_mode == "vanilla":
             self.loss = nn.BCEWithLogitsLoss()
-        elif gan_mode in ["wgangp"]:
+        elif gan_mode in ["wgan-gp"]:
             self.loss = None
         elif gan_mode == "dragan":
             raise NotImplementedError("dragan not yet implemented")
@@ -119,13 +119,15 @@ def gradient_penalty(f, real, fake, mode, p_norm=2):
 
         return gp
 
-    if mode in ["vanilla", "none"]:
+    if not mode or mode == "vanilla":
         gp = torch.tensor(0, dtype=real.dtype, device=real.device)
     elif mode in ["dragan", "dragan-gp", "dragan-lp"]:
         penalty_type = "gp" if mode == "dragan" else mode[-2:]
         gp = _gradient_penalty(f, real, penalty_type=penalty_type, p_norm=p_norm)
     elif mode in ["wgan-gp", "wgan-lp"]:
         gp = _gradient_penalty(f, real, fake, penalty_type=mode[-2:], p_norm=p_norm)
+    else:
+        raise ValueError("Don't know how to handle gan mode", mode)
 
     # TODO: implement mescheder's simplified gradient penalties
 

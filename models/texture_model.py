@@ -15,9 +15,9 @@ class TextureModel(BaseGAN):
     def modify_commandline_options(parser: ArgumentParser, is_train):
         parser = super(TextureModel, TextureModel).modify_commandline_options(parser, is_train)
         if is_train:
-            parser.add_argument("--lambda_l1", help="weight for L1 loss in final term")
+            parser.add_argument("--lambda_l1", type=float, default=1.0, help="weight for L1 loss in final term")
             parser.add_argument(
-                "--lambda_feat", help="weight for feature loss in final term"
+                "--lambda_feat", type=float, default=1.0, help="weight for feature loss in final term"
             )
         return parser
 
@@ -45,7 +45,6 @@ class TextureModel(BaseGAN):
 
     def set_input(self, input):
         textures, rois, cloths, targets = input
-        rois = TextureModule.reshape_rois(rois)
         self.textures = textures
         self.rois = rois
         self.cloths = cloths
@@ -69,8 +68,8 @@ class TextureModel(BaseGAN):
 
         # weighted sum
         self.loss_G = (
-            self.lambda_gan * self.loss_G_gan
-            + self.lambda_l1 * self.loss_G_l1
-            + self.lambda_feat * self.loss_G_feature
+            self.opt.lambda_gan * self.loss_G_gan
+            + self.opt.lambda_l1 * self.loss_G_l1
+            + self.opt.lambda_feat * self.loss_G_feature
         )
         self.loss_G.backward()

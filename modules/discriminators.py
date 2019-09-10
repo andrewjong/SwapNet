@@ -32,8 +32,8 @@ class Discriminator(nn.Module):
             nn.Linear(128 * ds_size ** 2, 1),  # a linear layer
         )
 
-    def forward(self, img_real, img_condition):
-        out = self.model(torch.cat((img_real, img_condition), 1))
+    def forward(self, input):
+        out = self.model(input)
         out = out.view(out.shape[0], -1)
         validity = self.adv_layer(out)
 
