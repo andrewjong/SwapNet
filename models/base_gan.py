@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 import optimizers
 from models import BaseModel
 import modules.loss
+from modules import discriminators
 from modules.discriminators import Discriminator
 
 
@@ -19,6 +20,7 @@ class BaseGAN(BaseModel, ABC):
         >>> parser = super().modify_commandline_options(parser, is_train)
         """
         if is_train:
+            # gan mode choice
             parser.add_argument(
                 "--gan_mode",
                 help="gan regularization to use",
@@ -45,6 +47,25 @@ class BaseGAN(BaseModel, ABC):
                 help="weight parameter for gradient penalty",
                 type=float,
                 default=10,
+            )
+            # discriminator choice
+            parser.add_argument(
+                "--discriminator",
+                default="basic",
+                choices=("basic", "pixel", "n_layers"),
+                help="what discriminator type to use",
+            )
+            parser.add_argument(
+                "--n_layers_D",
+                type=int,
+                default=3,
+                help="only used if discriminator==n_layers",
+            )
+            parser.add_argument(
+                "--norm",
+                type=str,
+                default="instance",
+                help="instance normalization or batch normalization [instance | batch | none]",
             )
             # optimizer choice
             parser.add_argument(
@@ -76,8 +97,8 @@ class BaseGAN(BaseModel, ABC):
 
         if self.is_train:
             # setup discriminator
-            self.net_discriminator = Discriminator(
-                in_channels=self.get_D_inchannels(), img_size=self.opt.crop_size
+            self.net_discriminator = discriminators.define_D(
+                self.get_D_inchannels(), 64, opt.discriminator, opt.n_layers_D, opt.norm
             ).to(self.device)
             modules.init_weights(self.net_discriminator, opt.init_type, opt.init_gain)
 
