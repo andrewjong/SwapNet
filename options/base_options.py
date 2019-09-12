@@ -23,17 +23,23 @@ class BaseOptions:
             help="load arguments from a json file instead of command line",
         )
         parser.add_argument(
-            "--name", default="my_experiment", help="name of the experiment, determines where things are saved"
+            "--name",
+            default="my_experiment",
+            help="name of the experiment, determines where things are saved",
         )
+        parser.add_argument("--verbose", action="store_true")
         parser.add_argument(
-            "--verbose", action="store_true"
-        )
-        parser.add_argument(
-            "--print_freq", default=256, help="batch frequency to print"
+            "--display_winsize",
+            type=int,
+            default=256,
+            help="display window size for both visdom and HTML",
         )
         # == MODEL INIT / LOADING / SAVING ==
         parser.add_argument(
-            "--model", help="which model to run", choices=("warp", "texture"), required=True
+            "--model",
+            help="which model to run",
+            choices=("warp", "texture"),
+            required=True,
         )
         parser.add_argument(
             "--checkpoints_dir", default="./checkpoints", help="Where to save models"
@@ -127,7 +133,9 @@ class BaseOptions:
             type=int,
             help="number of CPU threads for data loading",
         )
-        parser.add_argument("--gpu_id", default=0, type=int, help="gpu id to use. -1 for cpu")
+        parser.add_argument(
+            "--gpu_id", default=0, type=int, help="gpu id to use. -1 for cpu"
+        )
 
         self._parser = parser
         self.is_train = None
@@ -154,9 +162,8 @@ class BaseOptions:
             parser = options_modifier(parser, self.is_train)
             opt, _ = parser.parse_known_args()
             # hacky, add optimizer G params if different from opt_D
-            if arg is "optimizer_D" and opt.optimizer_D != opt.optimizer_G: 
+            if arg is "optimizer_D" and opt.optimizer_D != opt.optimizer_G:
                 modifiers.append("optimizer_G")
-
 
         self._parser = parser
         final_opt = self._parser.parse_args()
@@ -165,7 +172,6 @@ class BaseOptions:
     def parse(self):
         opt = self.gather_options()
         opt.is_train = self.is_train
-
 
         if opt.gpu_id > 0:
             torch.cuda.set_device(opt.gpu_id)

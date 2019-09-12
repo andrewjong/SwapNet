@@ -32,7 +32,7 @@ class BaseModel(ABC):
         self.gpu_id = opt.gpu_id
         self.is_train = opt.is_train
         self.device = (
-            torch.device(f"cuda:{self.gpu_id}") if self.gpu_id else torch.device("cpu")
+            torch.device(f"cuda:{self.gpu_id}") if self.gpu_id is not None else torch.device("cpu")
         )  # get device name: CPU or GPU
         self.save_dir = os.path.join(
             opt.checkpoints_dir, opt.name
@@ -162,7 +162,7 @@ class BaseModel(ABC):
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, f"net_{name}")
 
-                if self.gpu_id and torch.cuda.is_available():
+                if self.gpu_id is not None and torch.cuda.is_available():
                     torch.save(net.module.cpu().state_dict(), save_path)
                     net.cuda(self.gpu_id)
                 else:

@@ -7,12 +7,14 @@ import modules.loss
 from models import BaseModel
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import WarpModule
+from util.decode_labels import decode_cloth_labels
 
 
 class WarpModel(BaseGAN):
     """
     Implements training steps of the SwapNet Texture Module.
     """
+
     @staticmethod
     def modify_commandline_options(parser: ArgumentParser, is_train):
         """
@@ -22,9 +24,13 @@ class WarpModel(BaseGAN):
         """
         if is_train:
             parser.add_argument("--warp_mode", choices=("gan", "ce"))
-            parser.set_defaults(lambda_gan=0.1) # swapnet says "*small* adversarial loss"
+            parser.set_defaults(
+                lambda_gan=0.1
+            )  # swapnet says "*small* adversarial loss"
         # https://stackoverflow.com/questions/26788214/super-and-staticmethod-interaction
-        parser = super(WarpModel, WarpModel).modify_commandline_options(parser, is_train)
+        parser = super(WarpModel, WarpModel).modify_commandline_options(
+            parser, is_train
+        )
         return parser
 
     def __init__(self, opt):
@@ -33,11 +39,17 @@ class WarpModel(BaseGAN):
         Args:
             opt:
         """
-        self.body_channels = opt.body_channels if opt.body_representation == "labels" else 3 # 3 for RGB
-        self.cloth_channels = opt.cloth_channels if opt.cloth_representation == "labels" else 3 # 3 for RGB
+        self.body_channels = (
+            opt.body_channels if opt.body_representation == "labels" else 3
+        )  # 3 for RGB
+        self.cloth_channels = (
+            opt.cloth_channels if opt.cloth_representation == "labels" else 3
+        )  # 3 for RGB
 
         BaseGAN.__init__(self, opt)
 
+        # TODO: decode visuals for cloth
+        self.visual_names = ["inputs_decoded", "bodys", "targets_decoded", "fakes_decoded"]
 
         if self.is_train:
             # we use cross entropy loss in both
@@ -45,7 +57,7 @@ class WarpModel(BaseGAN):
             if opt.warp_mode != "gan":
                 # remove discriminator related things
                 self.model_names = ["generator"]
-                self.loss_names = ("G")
+                self.loss_names = "G"
                 del self.net_discriminator
                 del self.optimizer_D
                 self.optimizer_names = ["G"]
@@ -67,12 +79,16 @@ class WarpModel(BaseGAN):
 
     def set_input(self, input):
         bodys, inputs, targets = input
-        self.bodys = bodys
-        self.inputs = inputs
-        self.targets = targets
+        self.bodys = bodys.to(self.device)
+        self.inputs = inputs.to(self.device)
+        self.targets = targets.to(self.device)
+
+        self.inputs_decoded = decode_cloth_labels(inputs)
+        self.targets_decoded = decode_cloth_labels(targets)
 
     def forward(self):
         self.fakes = self.net_generator(self.bodys, self.inputs)
+        self.fakes_decoded = decode_cloth_labels(self.fakes)
 
     def backward_D(self):
         """

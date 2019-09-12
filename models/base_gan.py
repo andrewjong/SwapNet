@@ -23,7 +23,13 @@ class BaseGAN(BaseModel, ABC):
                 "--gan_mode",
                 help="gan regularization to use",
                 default="vanilla",
-                choices=("vanilla", "wgan-gp", "dragan", "mescheder-r1", "mescheder-r2"),
+                choices=(
+                    "vanilla",
+                    "wgan-gp",
+                    "dragan",
+                    "mescheder-r1",
+                    "mescheder-r2",
+                ),
             )
             parser.add_argument(
                 "--lambda_gan",
@@ -62,12 +68,12 @@ class BaseGAN(BaseModel, ABC):
             opt:
         """
         super().__init__(opt)
-        self.net_generator = self.define_G()
+        self.net_generator = self.define_G().to(self.device)
         if self.is_train:
             # setup discriminator
             self.net_discriminator = Discriminator(
                 in_channels=self.get_D_inchannels(), img_size=self.opt.crop_size
-            )
+            ).to(self.device)
             self.model_names = ["generator", "discriminator"]
 
             # setup GAN loss

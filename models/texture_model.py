@@ -5,6 +5,7 @@ from torch import nn
 import modules.loss
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import TextureModule
+from util.decode_labels import decode_cloth_labels
 
 
 class TextureModel(BaseGAN):
@@ -23,6 +24,9 @@ class TextureModel(BaseGAN):
 
     def __init__(self, opt):
         super().__init__(opt)
+
+        # TODO: decode cloth visual
+        self.visual_names = ["textures", "cloths_decoded", "targets", "fakes"]
 
         if self.is_train:
             # Define additional loss for generator
@@ -45,10 +49,11 @@ class TextureModel(BaseGAN):
 
     def set_input(self, input):
         textures, rois, cloths, targets = input
-        self.textures = textures
-        self.rois = rois
-        self.cloths = cloths
-        self.targets = targets
+        self.textures = textures.to(self.device)
+        self.rois = rois.to(self.device)
+        self.cloths = cloths.to(self.device)
+        self.cloths_decoded = decode_cloth_labels(cloths)
+        self.targets = targets.to(self.device)
 
     def forward(self):
         self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
