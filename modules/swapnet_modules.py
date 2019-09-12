@@ -221,6 +221,9 @@ class TextureModule(nn.Module):
 
         # concat on the channel dimension
         tex_with_cloth = torch.cat((upsampled_tex, cloth), 1)
+        # comment: DEBUG, is there something wrong with bottom part?
+        tex_with_cloth = torch.randn_like(tex_with_cloth)
+        self.DEBUG_random_input = tex_with_cloth
         d1 = self.down_1(tex_with_cloth)
         d2 = self.down_2(d1)
         d3 = self.down_3(d2)

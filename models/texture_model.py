@@ -40,8 +40,9 @@ class TextureModel(BaseGAN):
 
         # TODO: decode cloth visual
         self.visual_names = [
-            "textures_unnormalized",
-            "cloths_decoded",
+            # "textures_unnormalized",
+            # "cloths_decoded",
+            "DEBUG_random_input",
             "targets_unnormalized",
             "fakes",
             "fakes_scaled",
@@ -66,6 +67,8 @@ class TextureModel(BaseGAN):
         )
 
         self.fakes_scaled = scale_tensor(self.fakes, scale_each=True)
+        # all batch, only first 3 channels
+        self.DEBUG_random_input = self.net_generator.DEBUG_random_input[:, :3] # take the top 3 layers, to 'sample' the RGB image
 
     def get_D_inchannels(self):
         return self.opt.texture_channels
