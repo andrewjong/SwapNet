@@ -106,7 +106,7 @@ class TrainOptions(BaseOptions):
         # weights init
         parser.add_argument(
             "--init_type",
-            default="normal",
+            default="kaiming",
             choices=("normal", "xavier", "kaiming"),
             help="weights initialization method",
         )

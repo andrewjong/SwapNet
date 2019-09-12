@@ -72,11 +72,15 @@ class BaseGAN(BaseModel, ABC):
         """
         super().__init__(opt)
         self.net_generator = self.define_G().to(self.device)
+        modules.init_weights(self.net_generator, opt.init_type, opt.init_gain)
+
         if self.is_train:
             # setup discriminator
             self.net_discriminator = Discriminator(
                 in_channels=self.get_D_inchannels(), img_size=self.opt.crop_size
             ).to(self.device)
+            modules.init_weights(self.net_discriminator, opt.init_type, opt.init_gain)
+
             self.model_names = ["generator", "discriminator"]
 
             # setup GAN loss
