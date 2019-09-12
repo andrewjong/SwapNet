@@ -50,6 +50,6 @@ def decode_cloth_labels(pt_tensor, num_images=-1, num_classes=n_classes):
                     pixels[k_,j_] = label_colours[k]
         outputs[i] = np.array(img)
 
-    # convert back to tensor
+    # convert back to tensor. effectively puts back into range [0,1]
     back_to_pt = torch.from_numpy(outputs).permute(0, 3, 1, 2)
     return back_to_pt

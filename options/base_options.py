@@ -128,7 +128,7 @@ class BaseOptions:
             help="whether to shuffle dataset (default is No)",
         )
         parser.add_argument(
-            "--num_threads",
+            "--num_workers",
             default=4,
             type=int,
             help="number of CPU threads for data loading",

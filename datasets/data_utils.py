@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import random
 from collections import Counter
 
@@ -21,14 +22,67 @@ IMG_EXTENSIONS = [
     ".bmp",
     ".BMP",
 ]
-NP_EXTENSIONS = [
-    ".npz",  # numpy compressed
-]
+NP_EXTENSIONS = [".npz"]  # numpy compressed
 
+
+def get_norm_stats(dataroot, key):
+    df = pd.read_json(
+        os.path.join(dataroot, "normalization_stats.json"), lines=True
+    ).set_index("path")
+    series = df.loc[key]
+    return series["means"], series["stds"]
+
+def unnormalize(tensor, mean, std, clamp=True, inplace=False):
+    if not inplace:
+        tensor = tensor.clone()
+
+    def unnormalize_1(ten, men, st):
+        for t, m, s in zip(ten, men, st):
+            t.mul_(s).add_(m)
+            if clamp:
+                t.clamp_(0, 1)
+
+    if tensor.shape == 4:
+        # then we have batch size in front or something
+        for t in tensor:
+            unnormalize_1(t, mean, std)
+    else:
+        unnormalize_1(tensor, mean, std)
+
+    return tensor
+
+def scale_tensor(tensor, scale_each=False, range=None):
+    """
+    From torchvision's make_grid
+    :return:
+    """
+    tensor = tensor.clone()  # avoid modifying tensor in-place
+    if range is not None:
+        assert isinstance(range, tuple), \
+            "range has to be a tuple (min, max) if specified. min and max are numbers"
+
+    def norm_ip(img, min, max):
+        img.clamp_(min=min, max=max)
+        img.add_(-min).div_(max - min + 1e-5)
+
+    def norm_range(t, range):
+        if range is not None:
+            norm_ip(t, range[0], range[1])
+        else:
+            norm_ip(t, float(t.min()), float(t.max()))
+
+    if scale_each is True:
+        for t in tensor:  # loop over mini-batch dimension
+            norm_range(t, range)
+    else:
+        norm_range(tensor, range)
+
+    return tensor
 
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
+
 
 def in_extensions(filename, extensions):
     return any(filename.endswith(extension) for extension in extensions)
@@ -85,7 +139,7 @@ def remove_top_dir(dir, n=1):
 
     """
     parts = dir.split(os.path.sep)
-    top_removed = os.path.sep.join(parts[n+1:])
+    top_removed = os.path.sep.join(parts[n + 1 :])
     return top_removed
 
 
@@ -245,9 +299,7 @@ def per_channel_transform(input_tensor, transform_function) -> Tensor:
     :return: transformed pt tensor
     """
     input_tensor = input_tensor.numpy()
-    tform_input_np = np.zeros(
-        shape=input_tensor.shape, dtype=input_tensor.dtype
-    )
+    tform_input_np = np.zeros(shape=input_tensor.shape, dtype=input_tensor.dtype)
     n_channels = input_tensor.shape[0]
     for i in range(n_channels):
         tform_input_np[i] = np.array(

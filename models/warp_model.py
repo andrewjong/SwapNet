@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 import modules.loss
+from datasets.data_utils import unnormalize
 from models import BaseModel
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import WarpModule
@@ -49,7 +50,12 @@ class WarpModel(BaseGAN):
         BaseGAN.__init__(self, opt)
 
         # TODO: decode visuals for cloth
-        self.visual_names = ["inputs_decoded", "bodys", "targets_decoded", "fakes_decoded"]
+        self.visual_names = [
+            "inputs_decoded",
+            "bodys_unnormalized",
+            "targets_decoded",
+            "fakes_decoded",
+        ]
 
         if self.is_train:
             # we use cross entropy loss in both
@@ -61,6 +67,12 @@ class WarpModel(BaseGAN):
                 del self.net_discriminator
                 del self.optimizer_D
                 self.optimizer_names = ["G"]
+
+    def compute_visuals(self):
+        self.inputs_decoded = decode_cloth_labels(self.inputs)
+        self.bodys_unnormalized = unnormalize(self.bodys, *self.opt.body_norm_stats)
+        self.targets_decoded = decode_cloth_labels(self.targets)
+        self.fakes_decoded = decode_cloth_labels(self.fakes)
 
     def define_G(self):
         """
@@ -83,12 +95,9 @@ class WarpModel(BaseGAN):
         self.inputs = inputs.to(self.device)
         self.targets = targets.to(self.device)
 
-        self.inputs_decoded = decode_cloth_labels(inputs)
-        self.targets_decoded = decode_cloth_labels(targets)
 
     def forward(self):
         self.fakes = self.net_generator(self.bodys, self.inputs)
-        self.fakes_decoded = decode_cloth_labels(self.fakes)
 
     def backward_D(self):
         """
@@ -97,17 +106,20 @@ class WarpModel(BaseGAN):
         """
         # calculate real
         # THIS LINE:
-        conditioned_fake_input = torch.cat((self.fakes.detach(), self.bodys), 1)
-        pred_fake = self.net_discriminator(conditioned_fake_input)
+        conditioned_fake = torch.cat((self.fakes.detach(), self.bodys), 1)
+        pred_fake = self.net_discriminator(conditioned_fake)
         self.loss_D_fake = self.criterion_GAN(pred_fake, False)
         # calculate fake
         # AND THIS LINE ARE THE ONLY TWO CHANGED:
-        conditioned_real_input = torch.cat((self.targets, self.bodys), 1)
-        pred_real = self.net_discriminator(conditioned_real_input)
+        conditioned_real = torch.cat((self.targets, self.bodys), 1)
+        pred_real = self.net_discriminator(conditioned_real)
         self.loss_D_real = self.criterion_GAN(pred_real, True)
         # calculate gradient penalty
         self.loss_D_gp = modules.loss.gradient_penalty(
-            self.net_discriminator, self.targets, self.fakes, self.opt.gan_mode
+            self.net_discriminator,
+            conditioned_real,
+            conditioned_fake,
+            self.opt.gan_mode,
         )
         # final loss
         self.loss_D = (

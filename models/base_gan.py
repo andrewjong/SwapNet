@@ -41,7 +41,7 @@ class BaseGAN(BaseModel, ABC):
                 "--lambda_gp",
                 help="weight parameter for gradient penalty",
                 type=float,
-                default=0.2,
+                default=10,
             )
             # optimizer choice
             parser.add_argument(
@@ -78,7 +78,10 @@ class BaseGAN(BaseModel, ABC):
 
             # setup GAN loss
             self.criterion_GAN = modules.loss.GANLoss(opt.gan_mode).to(self.device)
-            self.loss_names = ("D", "D_real", "D_fake", "D_gp", "G", "G_gan")
+            self.loss_names = ["D", "D_real", "D_fake"]
+            if "gp" in opt.gan_mode:
+                self.loss_names += ["D_gp"]
+            self.loss_names += ["G", "G_gan"]
 
             # Define optimizers
             self.optimizer_G = optimizers.define_optimizer(

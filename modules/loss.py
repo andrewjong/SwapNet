@@ -72,11 +72,13 @@ class GANLoss(nn.Module):
         if self.gan_mode in ["lsgan", "vanilla"]:
             target_tensor = self.get_target_tensor(prediction, target_is_real)
             loss = self.loss(prediction, target_tensor)
-        elif self.gan_mode == "wgangp":
+        elif self.gan_mode == "wgan-gp":
             if target_is_real:
                 loss = -prediction.mean()
             else:
                 loss = prediction.mean()
+        else:
+            raise ValueError(f"{self.gan_mode} not recognized")
         return loss
 
 

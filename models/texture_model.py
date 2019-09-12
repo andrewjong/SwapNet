@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
 
+import torch
 from torch import nn
 
 import modules.loss
+from datasets.data_utils import unnormalize, scale_tensor
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import TextureModule
 from util.decode_labels import decode_cloth_labels
@@ -12,13 +14,24 @@ class TextureModel(BaseGAN):
     """
     Implements training steps of the SwapNet Texture Module.
     """
+
     @staticmethod
     def modify_commandline_options(parser: ArgumentParser, is_train):
-        parser = super(TextureModel, TextureModel).modify_commandline_options(parser, is_train)
+        parser = super(TextureModel, TextureModel).modify_commandline_options(
+            parser, is_train
+        )
         if is_train:
-            parser.add_argument("--lambda_l1", type=float, default=1.0, help="weight for L1 loss in final term")
             parser.add_argument(
-                "--lambda_feat", type=float, default=1.0, help="weight for feature loss in final term"
+                "--lambda_l1",
+                type=float,
+                default=1.0,
+                help="weight for L1 loss in final term",
+            )
+            parser.add_argument(
+                "--lambda_feat",
+                type=float,
+                default=1.0,
+                help="weight for feature loss in final term",
             )
         return parser
 
@@ -26,7 +39,13 @@ class TextureModel(BaseGAN):
         super().__init__(opt)
 
         # TODO: decode cloth visual
-        self.visual_names = ["textures", "cloths_decoded", "targets", "fakes"]
+        self.visual_names = [
+            "textures_unnormalized",
+            "cloths_decoded",
+            "targets_unnormalized",
+            "fakes",
+            "fakes_scaled",
+        ]
 
         if self.is_train:
             # Define additional loss for generator
@@ -35,7 +54,18 @@ class TextureModel(BaseGAN):
                 self.device
             )
 
-            self.loss_names = self.loss_names + ("G_l1", "G_feature")
+            self.loss_names = self.loss_names + ["G_l1", "G_feature"]
+
+    def compute_visuals(self):
+        self.textures_unnormalized = unnormalize(
+            self.textures, *self.opt.texture_norm_stats
+        )
+        self.cloths_decoded = decode_cloth_labels(self.cloths)
+        self.targets_unnormalized = unnormalize(
+            self.targets, *self.opt.texture_norm_stats
+        )
+
+        self.fakes_scaled = scale_tensor(self.fakes, scale_each=True)
 
     def get_D_inchannels(self):
         return self.opt.texture_channels
@@ -52,7 +82,6 @@ class TextureModel(BaseGAN):
         self.textures = textures.to(self.device)
         self.rois = rois.to(self.device)
         self.cloths = cloths.to(self.device)
-        self.cloths_decoded = decode_cloth_labels(cloths)
         self.targets = targets.to(self.device)
 
     def forward(self):

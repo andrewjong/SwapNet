@@ -16,6 +16,7 @@ from datasets.data_utils import (
     random_image_roi_flip,
     crop_tensors,
     crop_rois,
+    get_norm_stats,
 )
 
 
@@ -33,6 +34,11 @@ class TextureDataset(BaseDataset):
         # get all texture files
         self.texture_dir = os.path.join(opt.dataroot, "texture")
         self.texture_files = find_valid_files(self.texture_dir, IMG_EXTENSIONS)
+
+        self.texture_norm_stats = get_norm_stats(opt.dataroot, "texture")
+        opt.texture_norm_stats = self.texture_norm_stats
+        self._normalize_texture = transforms.Normalize(*self.texture_norm_stats)
+
         # cloth files
         self.cloth_dir = os.path.join(opt.dataroot, "cloth")
         self.cloth_ext = get_dir_file_extension(self.cloth_dir)
@@ -54,7 +60,9 @@ class TextureDataset(BaseDataset):
         # (1) Get target texture.
         target_texture_file = self.texture_files[index]
         target_texture_img = Image.open(target_texture_file).convert("RGB")
-        target_texture_tensor = transforms.ToTensor()(target_texture_img)
+        target_texture_tensor = self._normalize_texture(
+            transforms.ToTensor()(target_texture_img)
+        )
 
         # file id
         file_id = remove_extension(target_texture_file).lstrip(self.texture_dir + "/")
@@ -69,8 +77,12 @@ class TextureDataset(BaseDataset):
 
         # (4) Get randomly flipped input.
         # input will be randomly flipped of target; if we flip input, we must flip rois
-        input_texture_image, rois_tensor = random_image_roi_flip(target_texture_img, rois_tensor)
-        input_texture_tensor = transforms.ToTensor()(input_texture_image)
+        input_texture_image, rois_tensor = random_image_roi_flip(
+            target_texture_img, rois_tensor
+        )
+        input_texture_tensor = self._normalize_texture(
+            transforms.ToTensor()(input_texture_image)
+        )
 
         # do cropping if needed
         if self.crop_bounds:

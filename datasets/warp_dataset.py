@@ -14,6 +14,7 @@ from datasets.data_utils import (
     decompress_cloth_segment,
     per_channel_transform,
     crop_tensors,
+    get_norm_stats,
 )
 
 
@@ -29,7 +30,7 @@ class WarpDataset(BaseDataset):
         parser.add_argument(
             "--per_channel_transform",
             action="store_true",
-            default=True, # TODO: make this a toggle based on if data is RGB or labels
+            default=True,  # TODO: make this a toggle based on if data is RGB or labels
             help="Perform the transform for each label instead of on the image as a "
             "whole. --cloth_representation must be 'labels'.",
         )
@@ -43,9 +44,12 @@ class WarpDataset(BaseDataset):
         print("Extensions:", extensions)
         self.cloth_files = find_valid_files(self.cloth_dir, extensions)
         self.body_dir = os.path.join(opt.dataroot, "body")
+        self.body_norm_stats = get_norm_stats(opt.dataroot, "body")
+        opt.body_norm_stats = self.body_norm_stats
+        self._normalize_body = transforms.Normalize(*self.body_norm_stats)
 
         self.crop_bounds = eval(opt.crop_bounds) if opt.crop_bounds else None
-        self.input_transform = get_transforms(opt)
+        self.cloth_transform = get_transforms(opt)
 
     def __len__(self):
         """
@@ -78,12 +82,12 @@ class WarpDataset(BaseDataset):
         body_file = get_corresponding_file(cloth_file, self.body_dir)
         as_pil_image = Image.open(body_file).convert("RGB")
         # TODO: normalize the image
-        return transforms.ToTensor()(as_pil_image)
+        return self._normalize_body(transforms.ToTensor()(as_pil_image))
 
     def _perform_cloth_transform(self, cloth_tensor):
         """ Either does per-channel transform or whole-image transform """
         if self.opt.per_channel_transform:
-            return per_channel_transform(cloth_tensor, self.input_transform)
+            return per_channel_transform(cloth_tensor, self.cloth_transform)
         else:
             raise NotImplementedError("Sorry, per_channel_transform must be true")
             return self.input_transform(cloth_tensor)
@@ -101,7 +105,7 @@ class WarpDataset(BaseDataset):
         input_cloth_tensor, target_cloth_tensor = self._load_cloth(index)
         body_tensor = self._load_body(index)
         # apply the transformation for input cloth segmentation
-        if self.input_transform:
+        if self.cloth_transform:
             input_cloth_tensor = self._perform_cloth_transform(input_cloth_tensor)
         # crop to the proper image size
         if self.crop_bounds:

@@ -163,7 +163,7 @@ class BaseModel(ABC):
                 net = getattr(self, f"net_{name}")
 
                 if self.gpu_id is not None and torch.cuda.is_available():
-                    torch.save(net.module.cpu().state_dict(), save_path)
+                    torch.save(net.cpu().state_dict(), save_path)
                     net.cuda(self.gpu_id)
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
