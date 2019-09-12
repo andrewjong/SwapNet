@@ -33,12 +33,11 @@ class GANLoss(nn.Module):
         self.gan_mode = gan_mode
         if gan_mode == "lsgan":
             self.loss = nn.MSELoss()
-        elif gan_mode == "vanilla":
+        # according to DRAGAN GitHub, dragan also uses BCE loss: https://github.com/kodalinaveen3/DRAGAN/blob/master/DRAGAN.ipynb
+        elif gan_mode in ["vanilla", "dragan", "dragan-gp", "dragan-lp"]:
             self.loss = nn.BCEWithLogitsLoss()
-        elif gan_mode in ["wgan-gp"]:
+        elif "wgan" in gan_mode:
             self.loss = None
-        elif gan_mode == "dragan":
-            raise NotImplementedError("dragan not yet implemented")
         else:
             raise NotImplementedError("gan mode %s not implemented" % gan_mode)
 
@@ -69,10 +68,10 @@ class GANLoss(nn.Module):
         Returns:
             the calculated loss.
         """
-        if self.gan_mode in ["lsgan", "vanilla"]:
+        if self.gan_mode in ["lsgan", "vanilla", "dragan-gp", "dragan-lp"]:
             target_tensor = self.get_target_tensor(prediction, target_is_real)
             loss = self.loss(prediction, target_tensor)
-        elif self.gan_mode == "wgan-gp":
+        elif "wgan" in self.gan_mode:
             if target_is_real:
                 loss = -prediction.mean()
             else:

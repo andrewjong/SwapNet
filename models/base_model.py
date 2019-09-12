@@ -32,7 +32,9 @@ class BaseModel(ABC):
         self.gpu_id = opt.gpu_id
         self.is_train = opt.is_train
         self.device = (
-            torch.device(f"cuda:{self.gpu_id}") if self.gpu_id is not None else torch.device("cpu")
+            torch.device(f"cuda:{self.gpu_id}")
+            if self.gpu_id is not None
+            else torch.device("cpu")
         )  # get device name: CPU or GPU
         self.save_dir = os.path.join(
             opt.checkpoints_dir, opt.name
@@ -40,12 +42,14 @@ class BaseModel(ABC):
         try:
             os.makedirs(self.save_dir)
         except FileExistsError as e:
-            a = input(f"The experiment directory {self.save_dir} already exists. Are you sure you want to continue? (y/N): ")
-            if a.lower().strip() != "y":
-                raise e
-        if (
-            True
-        ):  # opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
+            if len(os.listdir(self.save_dir)) != 0:
+                a = input(
+                    f"The experiment directory {self.save_dir} already exists.\n"
+                    f"Are you sure you want to continue? (y/N): "
+                )
+                if a.lower().strip() != "y":
+                    raise e
+        if True:  # opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
             torch.backends.cudnn.benchmark = True
         self.loss_names = []
         self.model_names = []
@@ -92,7 +96,9 @@ class BaseModel(ABC):
         # if self.is_train:
         #     self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
         if not self.is_train or opt.continue_train:
-            load_suffix = "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
+            load_suffix = (
+                "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
+            )
             self.load_checkpoint(load_suffix)
         else:
             opt.from_epoch = 0

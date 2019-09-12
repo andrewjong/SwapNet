@@ -25,10 +25,13 @@ class BaseGAN(BaseModel, ABC):
                 default="vanilla",
                 choices=(
                     "vanilla",
+                    "wgan",
                     "wgan-gp",
-                    "dragan",
-                    "mescheder-r1",
-                    "mescheder-r2",
+                    "lsgan",
+                    "dragan-gp",
+                    "dragan-lp",
+                    "mescheder-r1-gp",
+                    "mescheder-r2-gp",
                 ),
             )
             parser.add_argument(
@@ -79,7 +82,7 @@ class BaseGAN(BaseModel, ABC):
             # setup GAN loss
             self.criterion_GAN = modules.loss.GANLoss(opt.gan_mode).to(self.device)
             self.loss_names = ["D", "D_real", "D_fake"]
-            if "gp" in opt.gan_mode:
+            if any(gp_mode in opt.gan_mode for gp_mode in ["gp", "lp"]):
                 self.loss_names += ["D_gp"]
             self.loss_names += ["G", "G_gan"]
 
@@ -129,15 +132,16 @@ class BaseGAN(BaseModel, ABC):
         # calculate fake
         pred_real = self.net_discriminator(self.targets)
         self.loss_D_real = self.criterion_GAN(pred_real, True)
-        # calculate gradient penalty
-        self.loss_D_gp = modules.loss.gradient_penalty(
-            self.net_discriminator, self.targets, self.fakes, self.opt.gan_mode
-        )
-        # final loss
-        self.loss_D = (
-            0.5 * (self.loss_D_fake + self.loss_D_real)
-            + self.opt.lambda_gp * self.loss_D_gp
-        )
+
+        self.loss_D = 0.5 * (self.loss_D_fake + self.loss_D_real)
+
+        if any(gp_mode in self.opt.gan_mode for gp_mode in ["gp", "lp"]):
+            # calculate gradient penalty
+            self.loss_D_gp = modules.loss.gradient_penalty(
+                self.net_discriminator, self.targets, self.fakes, self.opt.gan_mode
+            )
+            self.loss_D += self.opt.lambda_gp * self.loss_D_gp
+
         self.loss_D.backward()
 
     @abstractmethod
