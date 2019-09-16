@@ -49,6 +49,7 @@ class BaseModel(ABC):
                 )
                 if a.lower().strip() != "y":
                     raise e
+                print()
         if True:  # opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
             torch.backends.cudnn.benchmark = True
         self.loss_names = []

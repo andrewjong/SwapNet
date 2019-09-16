@@ -151,6 +151,12 @@ class BaseGAN(BaseModel, ABC):
         """
         Calculates loss and backpropagates for the discriminator
         """
+        # https://github.com/martinarjovsky/WassersteinGAN/blob/f7a01e82007ea408647c451b9e1c8f1932a3db67/main.py#L185
+        if self.opt.gan_mode == "wgan":
+            # clamp parameters to a cube
+            for p in self.net_discriminator.parameters():
+                p.data.clamp(-0.01, 0.01)
+
         # calculate real
         pred_fake = self.net_discriminator(self.fakes.detach())
         self.loss_D_fake = self.criterion_GAN(pred_fake, False)
