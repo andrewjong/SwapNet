@@ -24,13 +24,13 @@ class TextureModel(BaseGAN):
             parser.add_argument(
                 "--lambda_l1",
                 type=float,
-                default=1.0,
+                default=100,
                 help="weight for L1 loss in final term",
             )
             parser.add_argument(
                 "--lambda_feat",
                 type=float,
-                default=1.0,
+                default=100,
                 help="weight for feature loss in final term",
             )
         return parser
@@ -41,8 +41,8 @@ class TextureModel(BaseGAN):
         # TODO: decode cloth visual
         self.visual_names = [
             # "textures_unnormalized",
-            # "cloths_decoded",
-            "DEBUG_random_input",
+            "cloths_decoded",
+            # "DEBUG_random_input",
             "targets_unnormalized",
             "fakes",
             "fakes_scaled",
@@ -68,10 +68,10 @@ class TextureModel(BaseGAN):
 
         self.fakes_scaled = scale_tensor(self.fakes, scale_each=True)
         # all batch, only first 3 channels
-        self.DEBUG_random_input = self.net_generator.DEBUG_random_input[:, :3] # take the top 3 layers, to 'sample' the RGB image
+        # self.DEBUG_random_input = self.net_generator.DEBUG_random_input[:, :3] # take the top 3 layers, to 'sample' the RGB image
 
     def get_D_inchannels(self):
-        return self.opt.texture_channels
+        return self.opt.texture_channels + self.opt.cloth_channels
 
     def define_G(self):
         return TextureModule(
@@ -90,6 +90,36 @@ class TextureModel(BaseGAN):
     def forward(self):
         self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
 
+    def backward_D(self):
+        """
+        Calculates loss and backpropagates for the discriminator
+        """
+        # https://github.com/martinarjovsky/WassersteinGAN/blob/f7a01e82007ea408647c451b9e1c8f1932a3db67/main.py#L185
+        if self.opt.gan_mode == "wgan":
+            # clamp parameters to a cube
+            for p in self.net_discriminator.parameters():
+                p.data.clamp(-0.01, 0.01)
+
+        # calculate fake
+        fake_AB = torch.cat((self.cloths, self.fakes), 1)
+        pred_fake = self.net_discriminator(fake_AB.detach())
+        self.loss_D_fake = self.criterion_GAN(pred_fake, False)
+        # calculate real
+        real_AB = torch.cat((self.cloths, self.targets), 1)
+        pred_real = self.net_discriminator(real_AB)
+        self.loss_D_real = self.criterion_GAN(pred_real, True)
+
+        self.loss_D = 0.5 * (self.loss_D_fake + self.loss_D_real)
+
+        if any(gp_mode in self.opt.gan_mode for gp_mode in ["gp", "lp"]):
+            # calculate gradient penalty
+            self.loss_D_gp = modules.loss.gradient_penalty(
+                self.net_discriminator, self.targets, self.fakes, self.opt.gan_mode
+            )
+            self.loss_D += self.opt.lambda_gp * self.loss_D_gp
+
+        self.loss_D.backward()
+
     def backward_G(self):
         """
         Backward G for Texture stage.
@@ -97,16 +127,13 @@ class TextureModel(BaseGAN):
         Returns:
 
         """
-        pred_fake = self.net_discriminator(self.fakes)
-        self.loss_G_gan = self.criterion_GAN(pred_fake, True)
+        fake_AB = torch.cat((self.cloths, self.fakes), 1)
+        pred_fake = self.net_discriminator(fake_AB)
+        self.loss_G_gan = self.criterion_GAN(pred_fake, True) * self.opt.lambda_gan
 
-        self.loss_G_l1 = self.criterion_L1(self.fakes, self.targets)
-        self.loss_G_feature = self.criterion_features(self.fakes, self.targets)
+        self.loss_G_l1 = self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
+        self.loss_G_feature = self.criterion_features(self.fakes, self.targets) * self.opt.lambda_feat
 
         # weighted sum
-        self.loss_G = (
-            self.opt.lambda_gan * self.loss_G_gan
-            + self.opt.lambda_l1 * self.loss_G_l1
-            + self.opt.lambda_feat * self.loss_G_feature
-        )
+        self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_feature
         self.loss_G.backward()

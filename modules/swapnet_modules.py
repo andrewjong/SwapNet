@@ -4,8 +4,11 @@ Networks based on SwapNet (Raj et al. 2018).
 import code
 import logging
 import sys
+import math
 
 import torch
+
+from modules import pix2pix_modules
 
 sys.path.append("../lib")
 from model.roi_layers import ROIAlign
@@ -149,7 +152,15 @@ class WarpModule(nn.Module):
 
 
 class TextureModule(nn.Module):
-    def __init__(self, texture_channels=3, cloth_channels=19, num_roi=12, dropout=0.5):
+    def __init__(
+        self,
+        texture_channels=3,
+        cloth_channels=19,
+        num_roi=12,
+        dropout=0.5,
+        unet_type="pix2pix",
+        img_size=128,
+    ):
         super(TextureModule, self).__init__()
         self.roi_align = ROIAlign(
             output_size=(128, 128), spatial_scale=1, sampling_ratio=1
@@ -160,24 +171,37 @@ class TextureModule(nn.Module):
         self.encode = UNetDown(channels, channels)
 
         # UNET
-        self.down_1 = UNetDown(channels + cloth_channels, 64, normalize=False)
-        self.down_2 = UNetDown(64, 128)
-        self.down_3 = UNetDown(128, 256)
-        self.down_4 = UNetDown(256, 512, dropout=dropout)
-        self.down_5 = UNetDown(512, 1024, dropout=dropout)
-        self.down_6 = UNetDown(1024, 1024, normalize=False, dropout=dropout)
-        self.up_1 = UNetUp(1024, 1024, dropout=dropout)
-        self.up_2 = UNetUp(2 * 1024, 512, dropout=dropout)
-        self.up_3 = UNetUp(2 * 512, 256)
-        self.up_4 = UNetUp(2 * 256, 128)
-        self.up_5 = UNetUp(2 * 128, 64)
 
-        self.upsample_and_pad = nn.Sequential(
-            nn.Upsample(scale_factor=2),
-            nn.ZeroPad2d((1, 0, 1, 0)),
-            nn.Conv2d(128, texture_channels, 4, padding=1),
-            nn.Tanh(),
-        )
+        if unet_type == "pix2pix":
+            # fast log2 of img_size, int only
+            num_downs = math.frexp(img_size)[1] - 1
+            use_dropout = True if dropout is not None else False
+            # self.unet = pix2pix_modules.UnetGenerator(
+            #     channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
+            # )
+            self.unet = pix2pix_modules.UnetGenerator(
+                cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
+            )
+        else:
+            self.unet = nn.Sequential(
+                UNetDown(channels + cloth_channels, 64, normalize=False),
+                UNetDown(64, 128),
+                UNetDown(128, 256),
+                UNetDown(256, 512, dropout=dropout),
+                UNetDown(512, 1024, dropout=dropout),
+                UNetDown(1024, 1024, normalize=False, dropout=dropout),
+                UNetUp(1024, 1024, dropout=dropout),
+                UNetUp(2 * 1024, 512, dropout=dropout),
+                UNetUp(2 * 512, 256),
+                UNetUp(2 * 256, 128),
+                UNetUp(2 * 128, 64),
+                # upsample and pad
+                nn.Upsample(scale_factor=2),
+                nn.ZeroPad2d((1, 0, 1, 0)),
+                nn.Conv2d(128, texture_channels, 4, padding=1),
+                nn.Tanh(),
+            )
+        # print("u-net:", self.unet)
 
     @staticmethod
     def reshape_rois(rois):
@@ -222,18 +246,7 @@ class TextureModule(nn.Module):
         # concat on the channel dimension
         tex_with_cloth = torch.cat((upsampled_tex, cloth), 1)
         # comment: DEBUG, is there something wrong with bottom part?
-        tex_with_cloth = torch.randn_like(tex_with_cloth)
-        self.DEBUG_random_input = tex_with_cloth
-        d1 = self.down_1(tex_with_cloth)
-        d2 = self.down_2(d1)
-        d3 = self.down_3(d2)
-        d4 = self.down_4(d3)
-        d5 = self.down_5(d4)
-        d6 = self.down_6(d5)
-        u1 = self.up_1(d6, d5)
-        u2 = self.up_2(u1, d4)
-        u3 = self.up_3(u2, d3)
-        u4 = self.up_4(u3, d2)
-        u5 = self.up_5(u4, d1)
+        # tex_with_cloth = torch.randn_like(tex_with_cloth)
+        # self.DEBUG_random_input = cloth
 
-        return self.upsample_and_pad(u5)
+        return self.unet(cloth)

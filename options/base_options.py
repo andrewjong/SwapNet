@@ -38,7 +38,7 @@ class BaseOptions:
         parser.add_argument(
             "--model",
             help="which model to run",
-            choices=("warp", "texture"),
+            choices=("warp", "texture", "pix2pix"),
             required=True,
         )
         parser.add_argument(
@@ -54,6 +54,7 @@ class BaseOptions:
             help="path to data, should contain 'cloth/', 'body/', 'texture/', "
             "'rois.csv'",
         )
+        parser.add_argument("--dataset", help="dataset class to use, if none then will use model name")
         parser.add_argument(
             "--dataset_mode",
             default="image",

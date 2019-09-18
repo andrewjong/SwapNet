@@ -157,10 +157,10 @@ class BaseGAN(BaseModel, ABC):
             for p in self.net_discriminator.parameters():
                 p.data.clamp(-0.01, 0.01)
 
-        # calculate real
+        # calculate fake
         pred_fake = self.net_discriminator(self.fakes.detach())
         self.loss_D_fake = self.criterion_GAN(pred_fake, False)
-        # calculate fake
+        # calculate real
         pred_real = self.net_discriminator(self.targets)
         self.loss_D_real = self.criterion_GAN(pred_real, True)
 

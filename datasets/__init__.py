@@ -61,7 +61,8 @@ class CappedDataLoader:
         Step 2: create a multi-threaded data loader.
         """
         self.opt = opt
-        dataset_class = find_dataset_using_name(opt.model)
+        dname = opt.dataset if opt.dataset else opt.model
+        dataset_class = find_dataset_using_name(dname)
         self.dataset = dataset_class(opt)
         print(f"dataset [{type(self.dataset).__name__}] was created")
         self.dataloader = torch.utils.data.DataLoader(
