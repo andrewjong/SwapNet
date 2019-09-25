@@ -24,10 +24,13 @@ class WarpModel(BaseGAN):
         to train an additional discriminator network.
         """
         if is_train:
-            parser.add_argument("--warp_mode", choices=("gan", "ce"))
-            parser.set_defaults(
-                lambda_gan=0.1
-            )  # swapnet says "*small* adversarial loss"
+            parser.add_argument("--warp_mode", default="gan", choices=("gan", "ce"))
+            parser.add_argument(
+                "--lambda_ce",
+                type=float,
+                default=100,
+                help="weight for cross entropy loss in final term",
+            )
         # https://stackoverflow.com/questions/26788214/super-and-staticmethod-interaction
         parser = super(WarpModel, WarpModel).modify_commandline_options(
             parser, is_train
@@ -40,12 +43,14 @@ class WarpModel(BaseGAN):
         Args:
             opt:
         """
+        # 3 for RGB
         self.body_channels = (
             opt.body_channels if opt.body_representation == "labels" else 3
-        )  # 3 for RGB
+        )
+        # 3 for RGB
         self.cloth_channels = (
             opt.cloth_channels if opt.cloth_representation == "labels" else 3
-        )  # 3 for RGB
+        )
 
         BaseGAN.__init__(self, opt)
 
@@ -61,12 +66,14 @@ class WarpModel(BaseGAN):
             # we use cross entropy loss in both
             self.criterion_CE = nn.CrossEntropyLoss()
             if opt.warp_mode != "gan":
-                # remove discriminator related things
+                # remove discriminator related things if no GAN
                 self.model_names = ["generator"]
                 self.loss_names = "G"
                 del self.net_discriminator
                 del self.optimizer_D
                 self.optimizer_names = ["G"]
+            else:
+                self.loss_names += ["G_ce"]
 
     def compute_visuals(self):
         self.inputs_decoded = decode_cloth_labels(self.inputs)
@@ -95,7 +102,6 @@ class WarpModel(BaseGAN):
         self.inputs = inputs.to(self.device)
         self.targets = targets.to(self.device)
 
-
     def forward(self):
         self.fakes = self.net_generator(self.bodys, self.inputs)
 
@@ -104,28 +110,31 @@ class WarpModel(BaseGAN):
         Warp stage's custom backward_D implementation passes CONDITIONED input to 
         the discriminator. Concats the bodys with the cloth
         """
-        # calculate real
-        # THIS LINE:
-        conditioned_fake = torch.cat((self.fakes.detach(), self.bodys), 1)
-        pred_fake = self.net_discriminator(conditioned_fake)
-        self.loss_D_fake = self.criterion_GAN(pred_fake, False)
         # calculate fake
-        # AND THIS LINE ARE THE ONLY TWO CHANGED:
-        conditioned_real = torch.cat((self.targets, self.bodys), 1)
+        conditioned_fake = torch.cat((self.bodys, self.fakes), 1)
+        pred_fake = self.net_discriminator(conditioned_fake.detach())
+        self.loss_D_fake = self.criterion_GAN(pred_fake, False)
+        # calculate real
+        conditioned_real = torch.cat((self.bodys, self.targets), 1)
         pred_real = self.net_discriminator(conditioned_real)
         self.loss_D_real = self.criterion_GAN(pred_real, True)
+
+        self.loss_D = 0.5 * (self.loss_D_fake + self.loss_D_real)
+
         # calculate gradient penalty
-        self.loss_D_gp = modules.loss.gradient_penalty(
-            self.net_discriminator,
-            conditioned_real,
-            conditioned_fake,
-            self.opt.gan_mode,
-        )
+        if any(gp_mode in self.opt.gan_mode for gp_mode in ["gp", "lp"]):
+            self.loss_D_gp = (
+                modules.loss.gradient_penalty(
+                    self.net_discriminator,
+                    conditioned_real,
+                    conditioned_fake,
+                    self.opt.gan_mode,
+                )
+                * self.opt.lambda_gp
+            )
+            self.loss_D += self.loss_D_gp
+
         # final loss
-        self.loss_D = (
-            0.5 * (self.loss_D_fake + self.loss_D_real)
-            + self.opt.lambda_gp * self.loss_D_gp
-        )
         self.loss_D.backward()
 
     def backward_G(self):
@@ -134,19 +143,22 @@ class WarpModel(BaseGAN):
         loss. Else, loss is just cross entropy loss.
         """
         # cross entropy loss needed for both gan mode and ce mode
-        loss_ce = self.criterion_CE(self.fakes, torch.argmax(self.targets, dim=1))
+        loss_ce = (
+            self.criterion_CE(self.fakes, torch.argmax(self.targets, dim=1))
+            * self.opt.lambda_ce
+        )
 
         # if we're in GAN mode, calculate adversarial loss too
         if self.opt.warp_mode == "gan":
             self.loss_G_ce = loss_ce  # store loss_ce
 
             # calculate adversarial loss
-            conditioned_fake = torch.cat((self.fakes, self.bodys), 1)
+            conditioned_fake = torch.cat((self.bodys, self.fakes), 1)
             pred_fake = self.net_discriminator(conditioned_fake)
-            self.loss_G_gan = self.criterion_GAN(pred_fake, True)
+            self.loss_G_gan = self.criterion_GAN(pred_fake, True) * self.opt.lambda_gan
 
             # total loss is weighted sum
-            self.loss_G = self.opt.lambda_gan * self.loss_G_gan + self.loss_G_ce
+            self.loss_G = self.loss_G_gan + self.loss_G_ce
         else:
             # otherwise our only loss is cross entropy
             self.loss_G = loss_ce
