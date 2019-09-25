@@ -2,6 +2,8 @@
 A list of base options common to all stages
 """
 import argparse
+import json
+import os
 
 import torch
 
@@ -54,7 +56,9 @@ class BaseOptions:
             help="path to data, should contain 'cloth/', 'body/', 'texture/', "
             "'rois.csv'",
         )
-        parser.add_argument("--dataset", help="dataset class to use, if none then will use model name")
+        parser.add_argument(
+            "--dataset", help="dataset class to use, if none then will use model name"
+        )
         parser.add_argument(
             "--dataset_mode",
             default="image",
@@ -104,7 +108,9 @@ class BaseOptions:
             type=int,
             help="scale images (after padding) to this size",
         )
-        parser.add_argument("--crop_size", type=int, default=128, help="then crop to this size")
+        parser.add_argument(
+            "--crop_size", type=int, default=128, help="then crop to this size"
+        )
         parser.add_argument(
             "--crop_bounds",
             help="DO NOT USE WITH --crop_size. crop images to a region: ((hmin, hmax), (wmin, wmax))",
@@ -179,5 +185,40 @@ class BaseOptions:
             torch.cuda.set_device(opt.gpu_id)
             torch.backends.cudnn.benchmark = True
 
+        self.save_file = os.path.join(opt.checkpoints_dir, opt.name, "args.json")
         self.opt = opt
         return opt
+
+    def print(self):
+        """
+        prints the options nicely
+        :return:
+        """
+        d = vars(self.opt)
+        print("=====OPTIONS======")
+        for k, v in d.items():
+            print(k, ":", v)
+        print("==================")
+
+    def save(self):
+        """
+        Saves to a .json file
+        :return:
+        """
+        d = vars(self.opt)
+        os.makedirs(os.path.dirname(self.save_file), exist_ok=True)
+        with open(self.save_file, "w") as f:
+            f.write(json.dumps(d, indent=4))
+
+    def load(self, json_file):
+        """
+        Override configs
+        :return:
+        """
+        with open(json_file, "r") as f:
+            args = json.load(f)
+        # override options with values in config file
+        for k, v in args.items():
+            setattr(self.opt, k, v)
+        # but make sure the config file matches up
+        self.opt.config_file = json_file

@@ -29,8 +29,11 @@ from util.visualizer import Visualizer
 print = tqdm.write
 
 if __name__ == "__main__":
-    opt = TrainOptions().parse()  # get training options
-    print(str(vars(opt)))
+    config = TrainOptions()
+    opt = config.parse()  # get training options
+    if opt.config_file:
+        config.load(opt.config_file)
+    config.print(), config.save()
     # create a dataset given opt.dataset_mode and other options
     dataset = create_dataset(opt)
     dataset_size = len(dataset)  # get the number of images in the dataset.
