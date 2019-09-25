@@ -77,8 +77,10 @@ class TextureDataset(BaseDataset):
 
         # (4) Get randomly flipped input.
         # input will be randomly flipped of target; if we flip input, we must flip rois
+        h_flip = 0.5 if any(t in self.opt.input_transforms for t in ("h_flip", "all")) else 0
+        v_flip = 0.5 if any(t in self.opt.input_transforms for t in ("v_flip", "all")) else 0
         input_texture_image, rois_tensor = random_image_roi_flip(
-            target_texture_img, rois_tensor
+            target_texture_img, rois_tensor, vp=v_flip, hp=h_flip
         )
         input_texture_tensor = self._normalize_texture(
             transforms.ToTensor()(input_texture_image)

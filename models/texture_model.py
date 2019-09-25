@@ -40,7 +40,7 @@ class TextureModel(BaseGAN):
 
         # TODO: decode cloth visual
         self.visual_names = [
-            # "textures_unnormalized",
+            "textures_unnormalized",
             "cloths_decoded",
             # "DEBUG_random_input",
             "targets_unnormalized",
@@ -78,6 +78,7 @@ class TextureModel(BaseGAN):
             texture_channels=self.opt.texture_channels,
             cloth_channels=self.opt.cloth_channels,
             num_roi=self.opt.body_channels,
+            img_size=self.opt.crop_size,
         )
 
     def set_input(self, input):

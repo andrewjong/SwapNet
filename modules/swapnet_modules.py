@@ -173,12 +173,9 @@ class TextureModule(nn.Module):
         # UNET
 
         if unet_type == "pix2pix":
-            # fast log2 of img_size, int only
+            # fast log2 of img_size, int only. E.g. if size=128 => num_downs=7
             num_downs = math.frexp(img_size)[1] - 1
             use_dropout = True if dropout is not None else False
-            # self.unet = pix2pix_modules.UnetGenerator(
-            #     channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
-            # )
             self.unet = pix2pix_modules.UnetGenerator(
                 channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
             )

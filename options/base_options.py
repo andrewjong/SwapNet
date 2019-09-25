@@ -104,7 +104,7 @@ class BaseOptions:
             type=int,
             help="scale images (after padding) to this size",
         )
-        parser.add_argument("--crop_size", default=128, help="then crop to this size")
+        parser.add_argument("--crop_size", type=int, default=128, help="then crop to this size")
         parser.add_argument(
             "--crop_bounds",
             help="DO NOT USE WITH --crop_size. crop images to a region: ((hmin, hmax), (wmin, wmax))",
@@ -113,6 +113,7 @@ class BaseOptions:
         parser.add_argument(
             "--input_transforms",
             nargs="+",
+            default="none",
             choices=("none", "h_flip", "v_flip", "affine", "perspective", "all"),
             help="what random transforms to perform on the input ('all' for all transforms)",
         )
