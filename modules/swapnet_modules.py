@@ -180,7 +180,7 @@ class TextureModule(nn.Module):
             #     channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
             # )
             self.unet = pix2pix_modules.UnetGenerator(
-                cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
+                channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
             )
         else:
             self.unet = nn.Sequential(
@@ -245,8 +245,5 @@ class TextureModule(nn.Module):
 
         # concat on the channel dimension
         tex_with_cloth = torch.cat((upsampled_tex, cloth), 1)
-        # comment: DEBUG, is there something wrong with bottom part?
-        # tex_with_cloth = torch.randn_like(tex_with_cloth)
-        # self.DEBUG_random_input = cloth
 
-        return self.unet(cloth)
+        return self.unet(tex_with_cloth)
