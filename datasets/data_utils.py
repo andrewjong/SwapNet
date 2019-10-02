@@ -104,9 +104,9 @@ def find_valid_files(dir, extensions, max_dataset_size=float("inf")):
     images = []
     assert os.path.isdir(dir), "%s is not a valid directory" % dir
 
-    for root, _, fnames in sorted(os.walk(dir)):
+    for root, _, fnames in sorted(os.walk(dir, followlinks=True)):
         for fname in fnames:
-            if in_extensions(fname, extensions):
+            if in_extensions(fname, extensions if extensions else IMG_EXTENSIONS):
                 path = os.path.join(root, fname)
                 images.append(path)
     return images[: min(max_dataset_size, len(images))]
@@ -123,11 +123,12 @@ def get_dir_file_extension(dir, check=5):
 
     """
     exts = []
-    for root, _, fnames in os.walk(dir):
+    for root, _, fnames in os.walk(dir, followlinks=True):
         for fname in fnames[:check]:
             ext = os.path.splitext(fname)[1]
             exts.append(ext)
-
+    if len(exts) == 0:
+        raise ValueError(f"did not find any files under dir: {dir}")
     return Counter(exts).most_common(1)[0][0]
 
 
