@@ -4,6 +4,7 @@ from collections import OrderedDict
 from abc import ABC, abstractmethod
 
 # from . import networks
+from util.util import PromptOnce
 
 
 class BaseModel(ABC):
@@ -31,27 +32,17 @@ class BaseModel(ABC):
         self.opt = opt
         self.gpu_id = opt.gpu_id
         self.is_train = opt.is_train
+        # get device name: CPU or GPU
         self.device = (
             torch.device(f"cuda:{self.gpu_id}")
             if self.gpu_id is not None
             else torch.device("cpu")
-        )  # get device name: CPU or GPU
-        self.save_dir = os.path.join(
-            opt.checkpoints_dir, opt.name
-        )  # save all the checkpoints to save_dir
-        try:
-            os.makedirs(self.save_dir)
-        except FileExistsError as e:
-            if len(os.listdir(self.save_dir)) != 0:
-                a = input(
-                    f"The experiment directory {self.save_dir} already exists.\n"
-                    f"Are you sure you want to continue? (y/N): "
-                )
-                if a.lower().strip() != "y":
-                    raise e
-                print()
-        if True:  # opt.preprocess != 'scale_width':  # with [scale_width], input images might have different sizes, which hurts the performance of cudnn.benchmark.
-            torch.backends.cudnn.benchmark = True
+        )
+        # save all the checkpoints to save_dir
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        if self.is_train:
+            PromptOnce.makedirs(self.save_dir)
+
         self.loss_names = []
         self.model_names = []
         self.visual_names = []

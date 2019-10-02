@@ -76,8 +76,44 @@ def print_numpy(x, val=True, shp=False):
         print('shape,', x.shape)
     if val:
         x = x.flatten()
-        print('mean = %3.3f, min = %3.3f, max = %3.3f, median = %3.3f, std=%3.3f' % (
-            np.mean(x), np.min(x), np.max(x), np.median(x), np.std(x)))
+        print(
+            "mean = %3.3f, min = %3.3f, max = %3.3f, median = %3.3f, std=%3.3f"
+            % (np.mean(x), np.min(x), np.max(x), np.median(x), np.std(x))
+        )
+
+
+def remove_prefix(text, prefix):
+    """
+    Remove prefix from a string
+    :param text:
+    :param prefix:
+    :return:
+    """
+    return text[text.startswith(prefix) and len(prefix) :]
+
+
+class PromptOnce:
+    """
+    Prompts the user if a path already exists. However, it will only prompt once during
+    the whole run of the program.
+    """
+
+    already_asked = False
+
+    @staticmethod
+    def makedirs(path):
+        try:
+            os.makedirs(path)
+        except FileExistsError as e:
+            if len(os.listdir(path)) != 0 and not PromptOnce.already_asked:
+                a = input(
+                    f"The experiment directory {path} already exists.\n"
+                    f"Are you sure you want to continue? (y/N): "
+                )
+                if a.lower().strip() != "y":
+                    raise e
+                print()
+                PromptOnce.already_asked = True
 
 
 def mkdirs(paths):

@@ -10,6 +10,7 @@ import torch
 import datasets
 import models
 import optimizers
+from util.util import PromptOnce
 
 datasets, models, optimizers  # so auto import doesn't remove above
 
