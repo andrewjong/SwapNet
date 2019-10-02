@@ -1,6 +1,8 @@
 """
 A list of base options common to all stages
 """
+import copy
+import sys
 import argparse
 import json
 import os
@@ -18,7 +20,8 @@ datasets, models, optimizers  # so auto import doesn't remove above
 class BaseOptions:
     def __init__(self):
         parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            conflict_handler="resolve"
         )
         # == EXPERIMENT SETUP ==
         parser.add_argument(
@@ -153,33 +156,71 @@ class BaseOptions:
         parser.set_defaults(dataset=opt.model)
 
         # modify options for each arg that can do so
-        modifiers = ["model", "dataset", "optimizer_D"]
+        modifiers = ["model", "dataset"]
+        if self.is_train:
+            modifiers.append("optimizer_D")
         for arg in modifiers:
             # becomes model(s), dataset(s), optimizer(s)
             import_source = eval(arg.split("_")[0] + "s")
             # becomes e.g. opt.model, opt.dataset, opt.optimizer
             name = getattr(opt, arg)
-            options_modifier = import_source.get_options_modifier(name)
-            parser = options_modifier(parser, self.is_train)
-            opt, _ = parser.parse_known_args()
+            print(arg, name)
+            if name is not None:
+                options_modifier = import_source.get_options_modifier(name)
+                parser = options_modifier(parser, self.is_train)
+                opt, _ = parser.parse_known_args()
             # hacky, add optimizer G params if different from opt_D
             if arg is "optimizer_D" and opt.optimizer_D != opt.optimizer_G:
                 modifiers.append("optimizer_G")
 
         self._parser = parser
         final_opt = self._parser.parse_args()
+        final_opt.from_epoch = int(final_opt.from_epoch)
         return final_opt
 
-    def parse(self):
+    @staticmethod
+    def _validate(opt):
+        """
+        Validate that options are correct
+        :return:
+        """
+        assert (
+            opt.crop_size <= opt.load_size
+        ), "Crop size must be less than or equal to load size "
+
+    def parse(self, print_options=True, store_options=True, user_overrides=True):
+        """
+
+        Args:
+            print_options: print the options to screen when parsed
+            store_options: save the arguments to file: "{opt.checkpoints_dir}/{opt.name}/args.json"
+
+        Returns:
+
+        """
         opt = self.gather_options()
         opt.is_train = self.is_train
+
+        # perform assertions on arguments
+        BaseOptions._validate(opt)
 
         if opt.gpu_id > 0:
             torch.cuda.set_device(opt.gpu_id)
             torch.backends.cudnn.benchmark = True
 
-        self.save_file = os.path.join(opt.checkpoints_dir, opt.name, "args.json")
         self.opt = opt
+
+        # Load options from config file if present
+        if opt.config_file:
+            self.load(opt.config_file, user_overrides)
+
+        if print_options:  # print what we parsed
+            self.print()
+
+        if store_options:  # store options to file
+            root = opt.checkpoints_dir if self.is_train else opt.results_dir
+            self.save_file = os.path.join(root, opt.name, "args.json")
+            self.save()
         return opt
 
     def print(self):
@@ -199,19 +240,40 @@ class BaseOptions:
         :return:
         """
         d = vars(self.opt)
-        os.makedirs(os.path.dirname(self.save_file), exist_ok=True)
+        PromptOnce.makedirs(os.path.dirname(self.save_file))
         with open(self.save_file, "w") as f:
             f.write(json.dumps(d, indent=4))
 
-    def load(self, json_file):
+    def copy(self):
         """
-        Override configs
-        :return:
+        Returns: a deep copy of self
+
+        """
+        return copy.deepcopy(self)
+
+    def load(self, json_file, user_overrides=True):
+        """
+
+        Args:
+            json_file:
+            user_overrides: whether user command line arguments should override anything being loaded from the config file
+
+        Returns:
+
         """
         with open(json_file, "r") as f:
             args = json.load(f)
-        # override options with values in config file
+
+        # if the user specifies arguments on the command line, don't override these
+        if user_overrides:
+            user_args = filter(lambda a: a.startswith("--"), sys.argv[1:])
+            user_args = set([a.lstrip("-") for a in user_args])  # get rid of left dashes
+
+        # override default options with values in config file
         for k, v in args.items():
-            setattr(self.opt, k, v)
+            # only override if not specified on the cmdline
+            if not user_overrides or (user_overrides and k not in user_args):
+                setattr(self.opt, k, v)
         # but make sure the config file matches up
         self.opt.config_file = json_file
+        return self
