@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     # outer loop for different epochs;
     # we save the model by # <epoch_count>, <epoch_count>+<save_latest_freq>
-    for epoch in tqdm(range(opt.from_epoch, opt.n_epochs + 1)):
+    for epoch in tqdm(range(opt.from_epoch + 1, opt.n_epochs + 1)):
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()  # timer for data loading per iteration
         # the number of training iterations in current epoch, reset to 0 every epoch
@@ -90,7 +90,7 @@ if __name__ == "__main__":
                     print(
                         f"saving the latest model (epoch {epoch:d}, total_iters {total_iters:d}) "
                     )
-                    save_suffix = "iter_%d" % total_iters if opt.save_by_iter else "latest"
+                    save_suffix = "iter_%d" % total_iters if opt.save_by_iter else f"latest"
                     model.save_checkpoint(save_suffix)
 
                 iter_data_time = time.time()

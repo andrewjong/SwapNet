@@ -88,13 +88,14 @@ class BaseModel(ABC):
         # if self.is_train:
         #     self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
         if not self.is_train or opt.continue_train:
-            load_suffix = (
-                "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
-            )
-            self.load_checkpoint(load_suffix)
+            # load_suffix = (
+            #     "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
+            # )
+            self.load_checkpoint(opt.from_epoch)
         else:
             opt.from_epoch = 0
         self.print_networks(opt.verbose)
+        return self
 
     def eval(self):
         """Make models eval mode during test time"""
@@ -102,6 +103,7 @@ class BaseModel(ABC):
             if isinstance(name, str):
                 net = getattr(self, "net_" + name)
                 net.eval()
+        return self
 
     def test(self):
         """Forward function used in test time.
@@ -190,17 +192,17 @@ class BaseModel(ABC):
 
                 net.load_state_dict(state_dict)
 
-        for name in self.optimizer_names:
-            if isinstance(name, str):
-                load_filename = f"{epoch}_optim_{name}.pth"
-                load_path = os.path.join(self.save_dir, load_filename)
-                optim = getattr(self, f"optimizer_{name}")
-                print(f"loading the optimizer from {load_path}")
-                state_dict = torch.load(load_path)
-                if hasattr(state_dict, "_metadata"):
-                    del state_dict._metadata
-
-                optim.load_state_dict(state_dict)
+        if self.is_train:
+            for name in self.optimizer_names:
+                if isinstance(name, str):
+                    load_filename = f"{epoch}_optim_{name}.pth"
+                    load_path = os.path.join(self.save_dir, load_filename)
+                    optim = getattr(self, f"optimizer_{name}")
+                    print(f"loading the optimizer from {load_path}")
+                    state_dict = torch.load(load_path)
+                    if hasattr(state_dict, "_metadata"):
+                        del state_dict._metadata
+                    optim.load_state_dict(state_dict)
 
     def print_networks(self, verbose):
         """Print the total number of parameters in the network and (if verbose) network architecture
