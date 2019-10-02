@@ -43,15 +43,25 @@ class WarpDataset(BaseDataset):
         )
         return parser
 
-    def __init__(self, opt):
+    def __init__(self, opt, cloth_dir=None, body_dir=None):
+        """
+
+        Args:
+            opt:
+            cloth_dir: (optional) path to cloth dir, if provided
+            body_dir: (optional) path to body dir, if provided
+        """
         super().__init__(opt)
 
-        self.cloth_dir = os.path.join(opt.dataroot, "cloth")
-        extensions = [".npz"] if self.opt.cloth_representation is "labels" else None
+        self.cloth_dir = cloth_dir if cloth_dir else os.path.join(opt.dataroot, "cloth")
+        print("cloth dir", self.cloth_dir)
+        extensions = [".npz"] if self.opt.cloth_representation == "labels" else None
         print("Extensions:", extensions)
         self.cloth_files = find_valid_files(self.cloth_dir, extensions)
-        self.body_dir = os.path.join(opt.dataroot, "body")
-        self.body_norm_stats = get_norm_stats(opt.dataroot, "body")
+
+        self.body_dir = body_dir if body_dir else os.path.join(opt.dataroot, "body")
+        print("body dir", self.body_dir)
+        self.body_norm_stats = get_norm_stats(os.path.dirname(self.body_dir), "body")
         opt.body_norm_stats = self.body_norm_stats
         self._normalize_body = transforms.Normalize(*self.body_norm_stats)
 

@@ -37,18 +37,27 @@ class TextureDataset(BaseDataset):
             parser.set_defaults(input_transforms=("hflip", "vflip"))
         return parser
 
-    def __init__(self, opt):
+    def __init__(self, opt, texture_dir=None, cloth_dir=None):
+        """
+
+        Args:
+            opt: Namespace object
+            texture_dir (str): optional override path to texture dir
+            cloth_dir (str): optional override path to cloth dir
+        """
         super().__init__(opt)
         # get all texture files
-        self.texture_dir = os.path.join(opt.dataroot, "texture")
+        self.texture_dir = texture_dir if texture_dir else os.path.join(opt.dataroot, "texture")
         self.texture_files = find_valid_files(self.texture_dir, IMG_EXTENSIONS)
 
-        self.texture_norm_stats = get_norm_stats(opt.dataroot, "texture")
+        self.texture_norm_stats = get_norm_stats(
+            os.path.dirname(self.texture_dir), "texture"
+        )
         opt.texture_norm_stats = self.texture_norm_stats
         self._normalize_texture = transforms.Normalize(*self.texture_norm_stats)
 
         # cloth files
-        self.cloth_dir = os.path.join(opt.dataroot, "cloth")
+        self.cloth_dir = cloth_dir if cloth_dir else os.path.join(opt.dataroot, "cloth")
         self.cloth_ext = get_dir_file_extension(self.cloth_dir)
 
         self.rois_db = os.path.join(opt.dataroot, "rois.csv")
@@ -68,6 +77,7 @@ class TextureDataset(BaseDataset):
         # (1) Get target texture.
         target_texture_file = self.texture_files[index]
         target_texture_img = Image.open(target_texture_file).convert("RGB")
+
         target_texture_tensor = self._normalize_texture(
             transforms.ToTensor()(target_texture_img)
         )

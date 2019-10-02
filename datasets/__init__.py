@@ -36,7 +36,7 @@ def get_options_modifier(dataset_name):
     return dataset_class.modify_commandline_options
 
 
-def create_dataset(opt):
+def create_dataset(opt, **ds_kwargs):
     """Create a dataset given the option.
 
     This function wraps the class CappedDataLoader.
@@ -46,7 +46,7 @@ def create_dataset(opt):
         >>> from datasets import create_dataset
         >>> dataset = create_dataset(opt)
     """
-    data_loader = CappedDataLoader(opt)
+    data_loader = CappedDataLoader(opt, **ds_kwargs)
     return data_loader
 
 
@@ -54,7 +54,7 @@ class CappedDataLoader:
     """Wrapper class of Dataset class that caps the data limit at the specified
     max_dataset_size """
 
-    def __init__(self, opt):
+    def __init__(self, opt, **ds_kwargs):
         """Initialize this class
 
         Step 1: create a dataset instance given the name [dataset_mode]
