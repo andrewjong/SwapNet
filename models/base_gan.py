@@ -80,7 +80,7 @@ class BaseGAN(BaseModel, ABC):
                 default="AdamW",
                 choices=("AdamW", "AdaBound"),
             )
-            return parser
+        return parser
 
     def __init__(self, opt):
         """
