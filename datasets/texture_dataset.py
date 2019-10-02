@@ -25,8 +25,16 @@ class TextureDataset(BaseDataset):
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
+        # transforms
+        parser.add_argument(
+            "--input_transforms",
+            nargs="+",
+            default="none",
+            choices=("none", "hflip", "vflip", "all"),
+            help="what random transforms to perform on the input ('all' for all transforms)",
+        )
         if is_train:
-            parser.set_defaults(input_transforms=("h_flip", "v_flip"))
+            parser.set_defaults(input_transforms=("hflip", "vflip"))
         return parser
 
     def __init__(self, opt):

@@ -23,9 +23,16 @@ class WarpDataset(BaseDataset):
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
+        parser.add_argument(
+            "--input_transforms",
+            nargs="+",
+            default="none",
+            choices=("none", "hflip", "vflip", "affine", "perspective", "all"),
+            help="what random transforms to perform on the input ('all' for all transforms)",
+        )
         if is_train:
             parser.set_defaults(
-                input_transforms=("h_flip", "v_flip", "affine", "perspective")
+                input_transforms=("hflip", "vflip", "affine", "perspective")
             )
         parser.add_argument(
             "--per_channel_transform",

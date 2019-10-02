@@ -93,9 +93,9 @@ def get_transforms(opt):
         return
     every = "all" in opt.input_transforms
 
-    if every or "v_flip" in opt.input_transforms:
+    if every or "vflip" in opt.input_transforms:
         transforms_list.append(transforms.RandomVerticalFlip())
-    if every or "h_flip" in opt.input_transforms:
+    if every or "hflip" in opt.input_transforms:
         transforms_list.append(transforms.RandomHorizontalFlip())
     if every or "affine" in opt.input_transforms:
         transforms_list.append(

@@ -115,14 +115,6 @@ class BaseOptions:
             "--crop_bounds",
             help="DO NOT USE WITH --crop_size. crop images to a region: ((hmin, hmax), (wmin, wmax))",
         )
-        # transforms
-        parser.add_argument(
-            "--input_transforms",
-            nargs="+",
-            default="none",
-            choices=("none", "h_flip", "v_flip", "affine", "perspective", "all"),
-            help="what random transforms to perform on the input ('all' for all transforms)",
-        )
         # == ITERATION PROPERTIES ==
         parser.add_argument(
             "--max_dataset_size", type=int, default=float("inf"), help="cap on data"
