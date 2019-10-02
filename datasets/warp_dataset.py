@@ -137,8 +137,26 @@ class WarpDataset(BaseDataset):
 
 
 def get_corresponding_file(original, target_dir, target_ext=None):
+    """
+    Say an original file is
+        dataroot/subject/body/SAMPLE_ID.jpg
+
+    And we want the corresponding file
+        dataroot/subject/cloth/SAMPLE_ID.npz
+
+    The corresponding file is in target_dir dataroot/subject/cloth, so we replace the
+    top level directories with the target dir
+
+    Args:
+        original:
+        target_dir:
+        target_ext:
+
+    Returns:
+
+    """
     # number of top dir to replace
-    num_top_parts = len(os.path.split(target_dir))
+    num_top_parts = len(target_dir.split(os.path.sep))
     # replace the top dirs
     top_removed = remove_top_dir(original, num_top_parts)
     target_file = os.path.join(target_dir, top_removed)

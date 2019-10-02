@@ -143,7 +143,7 @@ def remove_top_dir(dir, n=1):
 
     """
     parts = dir.split(os.path.sep)
-    top_removed = os.path.sep.join(parts[n + 1 :])
+    top_removed = os.path.sep.join(parts[n:])
     return top_removed
 
 
