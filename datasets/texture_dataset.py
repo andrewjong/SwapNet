@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
+from torch import nn
 from torchvision import transforms as transforms
+from torchvision.transforms import functional as tf
 
 from datasets import BaseDataset, get_transforms
 from datasets.data_utils import (
@@ -61,14 +63,14 @@ class TextureDataset(BaseDataset):
         self.cloth_dir = cloth_dir if cloth_dir else os.path.join(opt.dataroot, "cloth")
         self.cloth_ext = get_dir_file_extension(self.cloth_dir)
 
+        # load rois
         self.rois_db = os.path.join(opt.dataroot, "rois.csv")
         self.rois_df = pd.read_csv(self.rois_db, index_col=0)
         # todo: remove None values preemptively, else we have to fill in with 0
         self.rois_df = self.rois_df.replace("None", 0).astype(np.float32)
 
-        self.crop_bounds = eval(opt.crop_bounds) if opt.crop_bounds else None
-
-        self.input_transform = get_transforms(opt)
+        # # per-channel transforms on the input
+        # self.input_transform = get_transforms(opt)
 
     def __len__(self):
         return len(self.texture_files)
@@ -80,7 +82,7 @@ class TextureDataset(BaseDataset):
         target_texture_img = Image.open(target_texture_file).convert("RGB")
 
         target_texture_tensor = self._normalize_texture(
-            transforms.ToTensor()(target_texture_img)
+            tf.to_tensor(tf.resize(target_texture_img, self.opt.load_size))
         )
 
         # file id
@@ -91,20 +93,30 @@ class TextureDataset(BaseDataset):
         # (2) Get corresponding cloth.
         cloth_file = os.path.join(self.cloth_dir, file_id + self.cloth_ext)
         cloth_tensor = decompress_cloth_segment(cloth_file, n_labels=19)
+        # resize cloth tensor
+        # We have to unsqueeze because interpolate expects batch in dim1
+        cloth_tensor = nn.functional.interpolate(
+            cloth_tensor.unsqueeze(0), size=self.opt.load_size
+        ).squeeze()
 
-        # (3) Get corresponding roi.
-        rois = self.rois_df.loc[file_id].values
+        # (3) Get and scale corresponding roi.
+        scale = float(self.opt.load_size) / target_texture_img.size[0]
+        rois = np.rint(self.rois_df.loc[file_id].values * scale)
         rois_tensor = torch.from_numpy(rois)
 
         # (4) Get randomly flipped input.
         # input will be randomly flipped of target; if we flip input, we must flip rois
-        h_flip = 0.5 if any(t in self.opt.input_transforms for t in ("h_flip", "all")) else 0
-        v_flip = 0.5 if any(t in self.opt.input_transforms for t in ("v_flip", "all")) else 0
+        hflip = (
+            0.5 if any(t in self.opt.input_transforms for t in ("hflip", "all")) else 0
+        )
+        vflip = (
+            0.5 if any(t in self.opt.input_transforms for t in ("vflip", "all")) else 0
+        )
         input_texture_image, rois_tensor = random_image_roi_flip(
-            target_texture_img, rois_tensor, vp=v_flip, hp=h_flip
+            target_texture_img, rois_tensor, vp=vflip, hp=hflip
         )
         input_texture_tensor = self._normalize_texture(
-            transforms.ToTensor()(input_texture_image)
+            tf.to_tensor(tf.resize(input_texture_image, self.opt.load_size))
         )
 
         # do cropping if needed
@@ -116,5 +128,12 @@ class TextureDataset(BaseDataset):
                 crop_bounds=self.crop_bounds,
             )
             rois_tensor = crop_rois(rois_tensor, self.crop_bounds)
+
+        # assert shapes
+        assert (
+            input_texture_tensor.shape[-2:]
+            == target_texture_tensor.shape[-2:]
+            == cloth_tensor.shape[-2:]
+        ), f"input {input_texture_tensor.shape}; target {target_texture_tensor.shape}; cloth {cloth_tensor.shape}"
 
         return input_texture_tensor, rois_tensor, cloth_tensor, target_texture_tensor

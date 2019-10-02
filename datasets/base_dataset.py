@@ -19,6 +19,7 @@ class BaseDataset(data.Dataset, ABC):
         """
         self.opt = opt
         self.root = opt.dataroot
+        self.crop_bounds = self.parse_crop_bounds()
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
@@ -45,3 +46,12 @@ class BaseDataset(data.Dataset, ABC):
             a dictionary of data with their names. It ususally contains the data itself and its metadata information.
         """
         pass
+
+    def parse_crop_bounds(self):
+        if isinstance(self.opt.crop_size, int) and self.opt.crop_size < self.opt.load_size:
+            minimum = int((self.opt.load_size - self.opt.crop_size) / 2)
+            maximum = self.opt.load_size - minimum
+            crop_bounds = ((minimum, maximum),) * 2  # assuming square
+        else:
+            crop_bounds = eval(self.opt.crop_bounds) if self.opt.crop_bounds else None
+        return crop_bounds

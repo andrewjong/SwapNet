@@ -65,7 +65,6 @@ class WarpDataset(BaseDataset):
         opt.body_norm_stats = self.body_norm_stats
         self._normalize_body = transforms.Normalize(*self.body_norm_stats)
 
-        self.crop_bounds = eval(opt.crop_bounds) if opt.crop_bounds else None
         self.cloth_transform = get_transforms(opt)
 
     def __len__(self):
@@ -124,6 +123,21 @@ class WarpDataset(BaseDataset):
         # apply the transformation for input cloth segmentation
         if self.cloth_transform:
             input_cloth_tensor = self._perform_cloth_transform(input_cloth_tensor)
+
+        # RESIZE TENSORS
+        # We have to unsqueeze because interpolate expects batch in dim1
+        input_cloth_tensor = nn.functional.interpolate(
+            input_cloth_tensor.unsqueeze(0), size=self.opt.load_size
+        ).squeeze()
+        target_cloth_tensor = nn.functional.interpolate(
+            target_cloth_tensor.unsqueeze(0), size=self.opt.load_size
+        ).squeeze()
+        body_tensor = nn.functional.interpolate(
+            body_tensor.unsqueeze(0),
+            size=self.opt.load_size,
+            mode="bilinear",  # same as default for torchvision.resize
+        ).squeeze()
+
         # crop to the proper image size
         if self.crop_bounds:
             input_cloth_tensor, target_cloth_tensor, body_tensor = crop_tensors(
