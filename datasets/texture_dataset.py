@@ -18,6 +18,7 @@ from datasets.data_utils import (
     crop_rois,
     get_norm_stats,
 )
+from util.util import remove_prefix
 
 
 class TextureDataset(BaseDataset):
@@ -83,7 +84,9 @@ class TextureDataset(BaseDataset):
         )
 
         # file id
-        file_id = remove_extension(target_texture_file).lstrip(self.texture_dir + "/")
+        file_id = remove_prefix(
+            remove_extension(target_texture_file), self.texture_dir + "/"
+        )
 
         # (2) Get corresponding cloth.
         cloth_file = os.path.join(self.cloth_dir, file_id + self.cloth_ext)
