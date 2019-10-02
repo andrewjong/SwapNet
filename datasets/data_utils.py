@@ -32,6 +32,7 @@ def get_norm_stats(dataroot, key):
     series = df.loc[key]
     return series["means"], series["stds"]
 
+
 def unnormalize(tensor, mean, std, clamp=True, inplace=False):
     if not inplace:
         tensor = tensor.clone()
@@ -51,6 +52,7 @@ def unnormalize(tensor, mean, std, clamp=True, inplace=False):
 
     return tensor
 
+
 def scale_tensor(tensor, scale_each=False, range=None):
     """
     From torchvision's make_grid
@@ -58,8 +60,9 @@ def scale_tensor(tensor, scale_each=False, range=None):
     """
     tensor = tensor.clone()  # avoid modifying tensor in-place
     if range is not None:
-        assert isinstance(range, tuple), \
-            "range has to be a tuple (min, max) if specified. min and max are numbers"
+        assert isinstance(
+            range, tuple
+        ), "range has to be a tuple (min, max) if specified. min and max are numbers"
 
     def norm_ip(img, min, max):
         img.clamp_(min=min, max=max)
@@ -181,23 +184,43 @@ def crop_tensor(tensor: Tensor, crop_bounds):
     return tensor[:, h_min:h_max, w_min:w_max]
 
 
-def crop_rois(rois: np.ndarray, crop_bounds):
+def crop_rois(rois, crop_bounds):
+    """
+    Crop roi coordinates
+
+    roi coordinates should be
+    xmin, ymin, xmax, ymax
+    ..., ..., ..., ...
+    :param rois:
+    :param crop_bounds:
+    :return:
+    """
     # TODO: might have to worry about nan values?
+    if isinstance(rois, np.ndarray):
+        clip, stack, copy = (np.clip, np.stack, lambda x: x.copy())
+        min = lambda inp, *args: inp.min(*args)
+    elif isinstance(rois, torch.Tensor):
+        clip, stack, copy = (torch.clamp, torch.stack, lambda x: x.clone())
+        # must do [0] because torch.min() returns two values
+        min = lambda inp, *args: inp.min(*args)[0]
+    else:
+        raise ValueError(
+            f"input must be numpy ndarray or torch Tensor, received {type(rois)}"
+        )
+
     if crop_bounds is not None:
-        rois = rois.copy()
+        rois = copy(rois)
         (h_min, h_max), (w_min, w_max) = crop_bounds
         # clip the x-axis to be within bounds. xmin and xmax index
-        xs = rois[:, (1, 2)]
-        xs = np.clip(xs, w_min, w_max - 1)
-        xs -= xs.min(axis=0)  # translate
+        xs = rois[:, (0, 2)]
+        xs = clip(xs, w_min, w_max - 1)
+        xs -= min(xs, 0)  # translate
         # clip the y-axis to be within bounds. ymin and ymax index
-        ys = rois[:, (3, 4)]
-        ys = np.clip(ys, h_min, h_max - 1)
-        ys -= ys.min(axis=0)  # translate
+        ys = rois[:, (1, 3)]
+        ys = clip(ys, h_min, h_max - 1)
+        ys -= min(ys, 0)  # translate
         # put it back together again
-        rois = np.stack((rois[:, 0], xs[:, 0], ys[:, 0], xs[:, 1], ys[:, 1]))
-        # transpose because stack stacked them opposite of what we want
-        rois = rois.T
+        rois = stack((xs[:, 0], ys[:, 0], xs[:, 1], ys[:, 1]), 1)
     return rois
 
 
