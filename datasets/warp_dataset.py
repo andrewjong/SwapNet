@@ -1,8 +1,10 @@
 import os
 import random
+from typing import Tuple
 
 import torch
 from PIL import Image
+from torch import nn
 from torchvision import transforms as transforms
 
 from datasets import BaseDataset, get_transforms
@@ -73,7 +75,7 @@ class WarpDataset(BaseDataset):
         """
         return len(self.cloth_files)
 
-    def _load_cloth(self, index) -> torch.Tensor:
+    def _load_cloth(self, index) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Loads the cloth file as a tensor
         """
@@ -86,10 +88,12 @@ class WarpDataset(BaseDataset):
             input_cloth_tensor = target_cloth_tensor.clone()
         elif self.opt.dataset_mode == "video":
             # video mode, can choose a random image
-            input_file = self.cloth_files[random.randint(0, len(self))]
+            input_file = self.cloth_files[random.randint(0, len(self)) - 1]
             input_cloth_tensor = decompress_cloth_segment(
                 input_file, self.opt.cloth_channels
             )
+        else:
+            raise ValueError(self.opt.dataset_mode)
         return input_cloth_tensor, target_cloth_tensor
 
     def _load_body(self, index):
