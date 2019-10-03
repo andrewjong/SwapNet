@@ -217,9 +217,9 @@ class BaseOptions:
         if print_options:  # print what we parsed
             self.print()
 
+        root = opt.checkpoints_dir if self.is_train else opt.results_dir
+        self.save_file = os.path.join(root, opt.name, "args.json")
         if store_options:  # store options to file
-            root = opt.checkpoints_dir if self.is_train else opt.results_dir
-            self.save_file = os.path.join(root, opt.name, "args.json")
             self.save()
         return opt
 
@@ -268,6 +268,7 @@ class BaseOptions:
         if user_overrides:
             user_args = filter(lambda a: a.startswith("--"), sys.argv[1:])
             user_args = set([a.lstrip("-") for a in user_args])  # get rid of left dashes
+            print("Not overriding:", user_args)
 
         # override default options with values in config file
         for k, v in args.items():
