@@ -95,6 +95,8 @@ class BaseGAN(BaseModel, ABC):
         self.net_generator = self.define_G().to(self.device)
         modules.init_weights(self.net_generator, opt.init_type, opt.init_gain)
 
+        self.model_names = ["generator"]
+
         if self.is_train:
             # setup discriminator
             self.net_discriminator = discriminators.define_D(
@@ -102,7 +104,8 @@ class BaseGAN(BaseModel, ABC):
             ).to(self.device)
             modules.init_weights(self.net_discriminator, opt.init_type, opt.init_gain)
 
-            self.model_names = ["generator", "discriminator"]
+            # load discriminator only at train time
+            self.model_names.append("discriminator")
 
             # setup GAN loss
             self.criterion_GAN = modules.loss.GANLoss(opt.gan_mode).to(self.device)

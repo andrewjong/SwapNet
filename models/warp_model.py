@@ -58,11 +58,11 @@ class WarpModel(BaseGAN):
         self.visual_names = [
             "inputs_decoded",
             "bodys_unnormalized",
-            "targets_decoded",
             "fakes_decoded",
         ]
 
         if self.is_train:
+            self.visual_names.append("targets_decoded") # only show targets during training
             # we use cross entropy loss in both
             self.criterion_CE = nn.CrossEntropyLoss()
             if opt.warp_mode != "gan":

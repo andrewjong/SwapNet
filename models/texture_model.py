@@ -42,13 +42,12 @@ class TextureModel(BaseGAN):
         self.visual_names = [
             "textures_unnormalized",
             "cloths_decoded",
-            # "DEBUG_random_input",
-            "targets_unnormalized",
             "fakes",
             "fakes_scaled",
         ]
 
         if self.is_train:
+            self.visual_names.append("targets_unnormalized")
             # Define additional loss for generator
             self.criterion_L1 = nn.L1Loss()
             self.criterion_features = modules.loss.get_vgg_feature_loss(opt, 1).to(
@@ -133,8 +132,12 @@ class TextureModel(BaseGAN):
         pred_fake = self.net_discriminator(fake_AB)
         self.loss_G_gan = self.criterion_GAN(pred_fake, True) * self.opt.lambda_gan
 
-        self.loss_G_l1 = self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
-        self.loss_G_feature = self.criterion_features(self.fakes, self.targets) * self.opt.lambda_feat
+        self.loss_G_l1 = (
+            self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
+        )
+        self.loss_G_feature = (
+            self.criterion_features(self.fakes, self.targets) * self.opt.lambda_feat
+        )
 
         # weighted sum
         self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_feature

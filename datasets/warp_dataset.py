@@ -60,8 +60,14 @@ class WarpDataset(BaseDataset):
         extensions = [".npz"] if self.opt.cloth_representation == "labels" else None
         print("Extensions:", extensions)
         self.cloth_files = find_valid_files(self.cloth_dir, extensions)
+        if not opt.shuffle_data:
+            self.cloth_files.sort()
 
         self.body_dir = body_dir if body_dir else os.path.join(opt.dataroot, "body")
+        if not self.is_train:  # only load these during inference
+            self.body_files = sorted(find_valid_files(self.body_dir))
+            if not opt.shuffle_data:
+                self.body_files.sort()
         print("body dir", self.body_dir)
         self.body_norm_stats = get_norm_stats(os.path.dirname(self.body_dir), "body")
         opt.body_norm_stats = self.body_norm_stats
@@ -73,9 +79,12 @@ class WarpDataset(BaseDataset):
         """
         Get the length of usable images. Note the length of cloth and body segmentations should be same
         """
-        return len(self.cloth_files)
+        if not self.is_train:
+            return min(len(self.cloth_files), len(self.body_files))
+        else:
+            return len(self.cloth_files)
 
-    def _load_cloth(self, index) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _load_cloth(self, index) -> Tuple[str, Tensor, Tensor]:
         """
         Loads the cloth file as a tensor
         """
@@ -83,26 +92,41 @@ class WarpDataset(BaseDataset):
         target_cloth_tensor = decompress_cloth_segment(
             cloth_file, self.opt.cloth_channels
         )
-        if self.opt.dataset_mode == "image":
-            # in image mode, the input cloth is the same as the target cloth
-            input_cloth_tensor = target_cloth_tensor.clone()
-        elif self.opt.dataset_mode == "video":
-            # video mode, can choose a random image
-            input_file = self.cloth_files[random.randint(0, len(self)) - 1]
-            input_cloth_tensor = decompress_cloth_segment(
-                input_file, self.opt.cloth_channels
-            )
+        if self.is_train:
+            # during train, we want to do some fancy transforms
+            if self.opt.dataset_mode == "image":
+                # in image mode, the input cloth is the same as the target cloth
+                input_cloth_tensor = target_cloth_tensor.clone()
+            elif self.opt.dataset_mode == "video":
+                # video mode, can choose a random image
+                cloth_file = self.cloth_files[random.randint(0, len(self)) - 1]
+                input_cloth_tensor = decompress_cloth_segment(
+                    cloth_file, self.opt.cloth_channels
+                )
+            else:
+                raise ValueError(self.opt.dataset_mode)
+
+            # apply the transformation for input cloth segmentation
+            if self.cloth_transform:
+                input_cloth_tensor = self._perform_cloth_transform(input_cloth_tensor)
+
+            return cloth_file, input_cloth_tensor, target_cloth_tensor
         else:
-            raise ValueError(self.opt.dataset_mode)
-        return input_cloth_tensor, target_cloth_tensor
+            # during inference, we just want to load the current cloth
+            return cloth_file, target_cloth_tensor, target_cloth_tensor
 
     def _load_body(self, index):
         """ Loads the body file as a tensor """
-        cloth_file = self.cloth_files[index]
-        body_file = get_corresponding_file(cloth_file, self.body_dir)
+        if self.is_train:
+            # use corresponding strategy during train
+            cloth_file = self.cloth_files[index]
+            body_file = get_corresponding_file(cloth_file, self.body_dir)
+        else:
+            # else we have to load by index
+            body_file = self.body_files[index]
         as_pil_image = Image.open(body_file).convert("RGB")
-        # TODO: normalize the image
-        return self._normalize_body(transforms.ToTensor()(as_pil_image))
+        body_tensor = self._normalize_body(transforms.ToTensor()(as_pil_image))
+        return body_file, body_tensor
 
     def _perform_cloth_transform(self, cloth_tensor):
         """ Either does per-channel transform or whole-image transform """
@@ -122,20 +146,18 @@ class WarpDataset(BaseDataset):
         """
 
         # the input cloth segmentation
-        input_cloth_tensor, target_cloth_tensor = self._load_cloth(index)
-        body_tensor = self._load_body(index)
-        # apply the transformation for input cloth segmentation
-        if self.cloth_transform:
-            input_cloth_tensor = self._perform_cloth_transform(input_cloth_tensor)
+        cloth_file, input_cloth_tensor, target_cloth_tensor = self._load_cloth(index)
+        body_file, body_tensor = self._load_body(index)
 
         # RESIZE TENSORS
         # We have to unsqueeze because interpolate expects batch in dim1
         input_cloth_tensor = nn.functional.interpolate(
             input_cloth_tensor.unsqueeze(0), size=self.opt.load_size
         ).squeeze()
-        target_cloth_tensor = nn.functional.interpolate(
-            target_cloth_tensor.unsqueeze(0), size=self.opt.load_size
-        ).squeeze()
+        if self.is_train:
+            target_cloth_tensor = nn.functional.interpolate(
+                target_cloth_tensor.unsqueeze(0), size=self.opt.load_size
+            ).squeeze()
         body_tensor = nn.functional.interpolate(
             body_tensor.unsqueeze(0),
             size=self.opt.load_size,
@@ -144,11 +166,8 @@ class WarpDataset(BaseDataset):
 
         # crop to the proper image size
         if self.crop_bounds:
-            input_cloth_tensor, target_cloth_tensor, body_tensor = crop_tensors(
-                input_cloth_tensor,
-                target_cloth_tensor,
-                body_tensor,
-                crop_bounds=self.crop_bounds,
+            input_cloth_tensor, body_tensor = crop_tensors(
+                input_cloth_tensor, body_tensor, crop_bounds=self.crop_bounds
             )
             if self.is_train:
                 target_cloth_tensor = crop_tensors(

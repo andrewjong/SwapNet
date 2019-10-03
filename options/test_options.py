@@ -9,6 +9,8 @@ class TestOptions(BaseOptions):
         self.is_train = False
         parser = self._parser
 
+        parser.set_defaults(max_dataset_size=50)
+        parser.add_argument("--interval", metavar="N", default=1, type=int, help="only run every n images")
         parser.add_argument(
             "--warp_checkpoint",
             help="checkpoint file of warp stage model, containing args.json file in "
@@ -41,5 +43,7 @@ class TestOptions(BaseOptions):
         # remove arguments
         parser.add_argument("--dataroot", help=argparse.SUPPRESS)  # remove dataroot arg
         parser.add_argument("--model", help=argparse.SUPPRESS)  # remove model as we restore from checkpoint
+        parser.add_argument("--name", default="", help=argparse.SUPPRESS)
+
 
         parser.set_defaults(**defaults)

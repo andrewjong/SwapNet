@@ -26,8 +26,11 @@ def run_warp(opt):
     warp_config = config.copy().load(
         os.path.join(config.opt.warp_checkpoint, "args.json")
     )
+    warp_config.opt.batch_size = 1
     warp_config.opt.from_epoch = opt.from_epoch
     warp_config.opt.is_train = False
+    warp_config.opt.shuffle_data = False
+    PromptOnce.makedirs(warp_out)
 
     warp_model = create_model(warp_config.opt)
     warp_model.setup(warp_config.opt).eval()
@@ -81,10 +84,9 @@ if __name__ == "__main__":
 
     if not opt.warp_checkpoint and not opt.texture_checkpoint:
         raise ValueError("Must set either warp_checkpoint or texture_checkpoint")
-    opt.batch_size = 1
 
     if opt.warp_checkpoint:
-        print("Runnng warp inference")
+        print("Running warp inference")
         run_warp(opt)
 
     if opt.texture_checkpoint:
