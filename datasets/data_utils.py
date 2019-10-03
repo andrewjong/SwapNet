@@ -26,9 +26,12 @@ NP_EXTENSIONS = [".npz"]  # numpy compressed
 
 
 def get_norm_stats(dataroot, key):
-    df = pd.read_json(
-        os.path.join(dataroot, "normalization_stats.json"), lines=True
-    ).set_index("path")
+    try:
+        df = pd.read_json(
+            os.path.join(dataroot, "normalization_stats.json"), lines=True
+        ).set_index("path")
+    except ValueError:
+        raise ValueError(f"Could not find 'normalization_stats.json' for {dataroot}")
     series = df.loc[key]
     return series["means"], series["stds"]
 
@@ -91,11 +94,12 @@ def in_extensions(filename, extensions):
     return any(filename.endswith(extension) for extension in extensions)
 
 
-def find_valid_files(dir, extensions, max_dataset_size=float("inf")):
+def find_valid_files(dir, extensions=None, max_dataset_size=float("inf")):
     """
     Get all the images recursively under a dir.
     Args:
         dir:
+        extensions: specific extensions to look for. else will use IMG_EXTENSIONS
         max_dataset_size:
 
     Returns: found files, where each item is a tuple (id, ext)
