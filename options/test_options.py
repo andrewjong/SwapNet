@@ -36,6 +36,7 @@ class TestOptions(BaseOptions):
             default="results",
             help="folder to output intermediate and final results",
         )
+        parser.add_argument("--compute_intermediates", action="store_true", help="compute and save intermediate visuals")
 
         # remove arguments
         parser.add_argument("--dataroot", help=argparse.SUPPRESS)  # remove dataroot arg

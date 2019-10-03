@@ -1,4 +1,6 @@
 import os
+
+from scipy import sparse
 import pandas as pd
 import random
 from collections import Counter
@@ -300,6 +302,25 @@ def decompress_cloth_segment(fname, n_labels) -> Tensor:
         print("Could not decompress cloth segment:", fname)
         raise e
     return to_onehot_tensor(data_sparse, n_labels)
+
+
+def compress_and_save_cloth(cloth_tensor, fname):
+    """
+    Assumes the tensor is a 1 hot encoded tensor.
+    Compresses a tensor to a scipy sparse matrix, saves to the given file.
+    Args:
+        cloth_tensor:
+        fname:
+
+    Returns:
+    """
+    assert len(cloth_tensor.shape) == 3, "can only compress 1 tensor at a time. remove the preceeding batch size"
+    max_only = cloth_tensor.argmax(dim=0)
+    as_numpy = max_only.cpu().numpy()
+    # use column sparse matrix, because saves a bit more space for a person standing.
+    # there's more empty space to the sides of the person
+    as_sparse = sparse.csc_matrix(as_numpy)
+    sparse.save_npz(fname, as_sparse)
 
 
 def to_onehot_tensor(sp_matrix, n_labels):
