@@ -2,7 +2,7 @@ import os
 import random
 from typing import Tuple
 
-import torch
+from torch import Tensor
 from PIL import Image
 from torch import nn
 from torchvision import transforms as transforms
@@ -110,7 +110,7 @@ class WarpDataset(BaseDataset):
             return per_channel_transform(cloth_tensor, self.cloth_transform)
         else:
             raise NotImplementedError("Sorry, per_channel_transform must be true")
-            return self.input_transform(cloth_tensor)
+            # return self.input_transform(cloth_tensor)
 
     def __getitem__(self, index):
         """
@@ -150,8 +150,18 @@ class WarpDataset(BaseDataset):
                 body_tensor,
                 crop_bounds=self.crop_bounds,
             )
+            if self.is_train:
+                target_cloth_tensor = crop_tensors(
+                    target_cloth_tensor, crop_bounds=self.crop_bounds
+                )
 
-        return body_tensor, input_cloth_tensor, target_cloth_tensor
+        return {
+            "body_paths": body_file,
+            "bodys": body_tensor,
+            "cloth_paths": cloth_file,
+            "input_cloths": input_cloth_tensor,
+            "target_cloths": target_cloth_tensor,
+        }
 
 
 def get_corresponding_file(original, target_dir, target_ext=None):

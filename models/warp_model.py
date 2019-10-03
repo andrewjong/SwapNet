@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 import modules.loss
-from datasets.data_utils import unnormalize
+from datasets.data_utils import unnormalize, remove_top_dir
 from models import BaseModel
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import WarpModule
@@ -97,10 +97,11 @@ class WarpModel(BaseGAN):
         return self.cloth_channels + self.body_channels
 
     def set_input(self, input):
-        bodys, inputs, targets = input
-        self.bodys = bodys.to(self.device)
-        self.inputs = inputs.to(self.device)
-        self.targets = targets.to(self.device)
+        self.bodys = input["bodys"].to(self.device)
+        self.inputs = input["input_cloths"].to(self.device)
+        self.targets = input["target_cloths"].to(self.device)
+
+        self.image_paths = tuple(zip(input["cloth_paths"], input["body_paths"]))
 
     def forward(self):
         self.fakes = self.net_generator(self.bodys, self.inputs)

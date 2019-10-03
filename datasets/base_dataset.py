@@ -20,6 +20,7 @@ class BaseDataset(data.Dataset, ABC):
         self.opt = opt
         self.root = opt.dataroot
         self.crop_bounds = self.parse_crop_bounds()
+        self.is_train = opt.is_train
 
     @staticmethod
     def modify_commandline_options(parser, is_train):

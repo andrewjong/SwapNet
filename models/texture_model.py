@@ -82,11 +82,12 @@ class TextureModel(BaseGAN):
         )
 
     def set_input(self, input):
-        textures, rois, cloths, targets = input
-        self.textures = textures.to(self.device)
-        self.rois = rois.to(self.device)
-        self.cloths = cloths.to(self.device)
-        self.targets = targets.to(self.device)
+        self.textures = input["input_textures"].to(self.device)
+        self.rois = input["rois"].to(self.device)
+        self.cloths = input["cloths"].to(self.device)
+        self.targets = input["target_textures"].to(self.device)
+
+        self.image_paths = tuple(zip(input["cloth_paths"], input["texture_paths"]))
 
     def forward(self):
         self.fakes = self.net_generator(self.textures, self.rois, self.cloths)

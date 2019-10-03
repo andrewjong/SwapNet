@@ -3,12 +3,13 @@ import os
 import sys
 import ntpath
 import time
+
+from datasets.data_utils import remove_extension
 from . import util, html
 from subprocess import Popen, PIPE
 
 from tqdm import tqdm
 print = tqdm.write
-
 
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
@@ -29,8 +30,7 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
     This function will save images stored in 'visuals' to the HTML file specified by 'webpage'.
     """
     image_dir = webpage.get_image_dir()
-    short_path = ntpath.basename(image_path[0])
-    name = os.path.splitext(short_path)[0]
+    name = "_to_".join([remove_extension(ntpath.basename(p)) for p in image_path[0]])
 
     webpage.add_header(name)
     ims, txts, links = [], [], []

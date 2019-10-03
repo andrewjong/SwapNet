@@ -136,4 +136,12 @@ class TextureDataset(BaseDataset):
             == cloth_tensor.shape[-2:]
         ), f"input {input_texture_tensor.shape}; target {target_texture_tensor.shape}; cloth {cloth_tensor.shape}"
 
-        return input_texture_tensor, rois_tensor, cloth_tensor, target_texture_tensor
+        return {
+            "texture_paths": target_texture_file,
+            "input_textures": input_texture_tensor,
+            "rois": rois_tensor,
+            "cloth_paths": cloth_file,
+            "cloths": cloth_tensor,
+            "target_textures": target_texture_tensor
+        }
+        # return input_texture_tensor, rois_tensor, cloth_tensor, target_texture_tensor
