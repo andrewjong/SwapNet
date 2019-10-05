@@ -65,7 +65,7 @@ class WarpDataset(BaseDataset):
 
         self.body_dir = body_dir if body_dir else os.path.join(opt.dataroot, "body")
         if not self.is_train:  # only load these during inference
-            self.body_files = sorted(find_valid_files(self.body_dir))
+            self.body_files = find_valid_files(self.body_dir)
             if not opt.shuffle_data:
                 self.body_files.sort()
         print("body dir", self.body_dir)
@@ -169,7 +169,7 @@ class WarpDataset(BaseDataset):
             input_cloth_tensor, body_tensor = crop_tensors(
                 input_cloth_tensor, body_tensor, crop_bounds=self.crop_bounds
             )
-            if self.is_train:
+            if self.is_train: # avoid extra work if we don't need targets for inference
                 target_cloth_tensor = crop_tensors(
                     target_cloth_tensor, crop_bounds=self.crop_bounds
                 )

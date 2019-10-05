@@ -105,11 +105,11 @@ class PromptOnce:
     already_asked = False
 
     @staticmethod
-    def makedirs(path):
+    def makedirs(path, prompt=True):
         try:
             os.makedirs(path)
         except FileExistsError as e:
-            if len(os.listdir(path)) != 0 and not PromptOnce.already_asked:
+            if prompt and len(os.listdir(path)) != 0 and not PromptOnce.already_asked:
                 a = input(
                     f"The experiment directory {path} already exists.\n"
                     f"Are you sure you want to continue? (y/N): "

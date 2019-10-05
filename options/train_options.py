@@ -72,7 +72,7 @@ class TrainOptions(BaseOptions):
         )
         # Training parameters
         parser.add_argument(
-            "--n_epochs", default=20, type=int, help="number of epochs to train until"
+            "--n_epochs", "--num_epochs", default=20, type=int, help="number of epochs to train until"
         )
         parser.add_argument(
             "--sample_freq",

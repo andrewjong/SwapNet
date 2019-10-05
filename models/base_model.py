@@ -41,7 +41,7 @@ class BaseModel(ABC):
         # save all the checkpoints to save_dir
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         if self.is_train:
-            PromptOnce.makedirs(self.save_dir)
+            PromptOnce.makedirs(self.save_dir, not opt.no_confirm)
 
         self.loss_names = []
         self.model_names = []
@@ -189,6 +189,7 @@ class BaseModel(ABC):
             del state_dict._metadata
 
         net.load_state_dict(state_dict)
+        return self
 
     def load_checkpoint_dir(self, epoch):
         """Load all the networks from the disk.
@@ -212,6 +213,7 @@ class BaseModel(ABC):
                     if hasattr(state_dict, "_metadata"):
                         del state_dict._metadata
                     optim.load_state_dict(state_dict)
+        return self
 
     def print_networks(self, verbose):
         """Print the total number of parameters in the network and (if verbose) network architecture

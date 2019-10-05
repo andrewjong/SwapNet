@@ -61,11 +61,13 @@ class TextureModel(BaseGAN):
             self.textures, *self.opt.texture_norm_stats
         )
         self.cloths_decoded = decode_cloth_labels(self.cloths)
-        self.targets_unnormalized = unnormalize(
-            self.targets, *self.opt.texture_norm_stats
-        )
 
         self.fakes_scaled = scale_tensor(self.fakes, scale_each=True)
+
+        if self.is_train:
+            self.targets_unnormalized = unnormalize(
+                self.targets, *self.opt.texture_norm_stats
+            )
         # all batch, only first 3 channels
         # self.DEBUG_random_input = self.net_generator.DEBUG_random_input[:, :3] # take the top 3 layers, to 'sample' the RGB image
 

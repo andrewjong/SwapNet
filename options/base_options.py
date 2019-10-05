@@ -145,6 +145,9 @@ class BaseOptions:
         parser.add_argument(
             "--gpu_id", default=0, type=int, help="gpu id to use. -1 for cpu"
         )
+        parser.add_argument(
+            "--no_confirm", action="store_true", help="do not prompt for confirmations"
+        )
 
         self._parser = parser
         self.is_train = None
@@ -245,7 +248,8 @@ class BaseOptions:
         :return:
         """
         d = vars(self.opt)
-        PromptOnce.makedirs(os.path.dirname(self.save_file))
+
+        PromptOnce.makedirs(os.path.dirname(self.save_file), not self.opt.no_confirm)
         with open(self.save_file, "w") as f:
             f.write(json.dumps(d, indent=4))
 

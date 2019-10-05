@@ -29,9 +29,9 @@ def _setup(subfolder_name):
 
     """
     out_dir = get_out_dir(subfolder_name)
-    PromptOnce.makedirs(out_dir)
+    PromptOnce.makedirs(out_dir, not opt.no_confirm)
     webpage = None
-    if not opt.texture_checkpoint or opt.compute_intermediates:
+    if not opt.warp_checkpoint or opt.visualize_intermediates:
         webpage = html.HTML(
             out_dir,
             f"Experiment = {opt.name}, Phase = {subfolder_name} inference, "
@@ -44,7 +44,7 @@ def get_out_dir(subfolder_name):
     return os.path.join(opt.results_dir, subfolder_name)
 
 
-def _rebuild_from_checkpoint(checkpoint_file, **ds_kwargs):
+def _rebuild_from_checkpoint(checkpoint_file, same_crop_load_size=False, **ds_kwargs):
     """
     Loads a model and dataset based on the config in a particular dir.
     Args:
@@ -63,8 +63,12 @@ def _rebuild_from_checkpoint(checkpoint_file, **ds_kwargs):
         batch_size=1,
         shuffle_data=opt.shuffle_data,  # let inference opt take precedence
     )
+    if same_crop_load_size:  # need to override this if we're using intermediates
+        loaded_opt.load_size = loaded_opt.crop_size
     model = create_model(loaded_opt)
-    model.load_model_weights(checkpoint_file).eval()  # loads the checkpoint
+    model.load_model_weights(
+        "generator", checkpoint_file
+    ).eval()  # loads the checkpoint
     model.print_networks(opt.verbose)
 
     dataset = create_dataset(loaded_opt, **ds_kwargs)
@@ -173,7 +177,10 @@ def _run_texture():
         cloth_dir = opt.cloth_dir
 
     texture_model, texture_dataset = _rebuild_from_checkpoint(
-        opt.texture_checkpoint, texture_dir=opt.texture_dir, cloth_dir=cloth_dir
+        opt.texture_checkpoint,
+        same_crop_load_size=True if opt.warp_checkpoint else False,
+        texture_dir=opt.texture_dir,
+        cloth_dir=cloth_dir,
     )
 
     _run_test_loop(texture_model, texture_dataset, webpage)

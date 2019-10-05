@@ -50,7 +50,9 @@ class TextureDataset(BaseDataset):
         """
         super().__init__(opt)
         # get all texture files
-        self.texture_dir = texture_dir if texture_dir else os.path.join(opt.dataroot, "texture")
+        self.texture_dir = (
+            texture_dir if texture_dir else os.path.join(opt.dataroot, "texture")
+        )
         self.texture_files = find_valid_files(self.texture_dir, IMG_EXTENSIONS)
 
         self.texture_norm_stats = get_norm_stats(
@@ -62,6 +64,10 @@ class TextureDataset(BaseDataset):
         # cloth files
         self.cloth_dir = cloth_dir if cloth_dir else os.path.join(opt.dataroot, "cloth")
         self.cloth_ext = get_dir_file_extension(self.cloth_dir)
+        if not self.is_train:
+            self.cloth_files = find_valid_files(self.cloth_dir, extensions=".npz")
+            if not opt.shuffle_data:
+                self.cloth_files.sort()
 
         # load rois
         self.rois_db = os.path.join(opt.dataroot, "rois.csv")
@@ -73,7 +79,10 @@ class TextureDataset(BaseDataset):
         # self.input_transform = get_transforms(opt)
 
     def __len__(self):
-        return len(self.texture_files)
+        if self.is_train:
+            return len(self.texture_files)
+        else:
+            return min(len(self.texture_files), len(self.cloth_files))
 
     def __getitem__(self, index: int):
         """ """
@@ -85,13 +94,17 @@ class TextureDataset(BaseDataset):
             tf.to_tensor(tf.resize(target_texture_img, self.opt.load_size))
         )
 
-        # file id
+        # file id for matching cloth and matching ROI
         file_id = remove_prefix(
             remove_extension(target_texture_file), self.texture_dir + "/"
         )
 
-        # (2) Get corresponding cloth.
-        cloth_file = os.path.join(self.cloth_dir, file_id + self.cloth_ext)
+        # (2) Get corresponding cloth if train, else cloth at index if inference.
+        cloth_file = (
+            os.path.join(self.cloth_dir, file_id + self.cloth_ext)
+            if self.is_train
+            else self.cloth_files[index]
+        )
         cloth_tensor = decompress_cloth_segment(cloth_file, n_labels=19)
         # resize cloth tensor
         # We have to unsqueeze because interpolate expects batch in dim1
@@ -142,6 +155,5 @@ class TextureDataset(BaseDataset):
             "rois": rois_tensor,
             "cloth_paths": cloth_file,
             "cloths": cloth_tensor,
-            "target_textures": target_texture_tensor
+            "target_textures": target_texture_tensor,
         }
-        # return input_texture_tensor, rois_tensor, cloth_tensor, target_texture_tensor

@@ -107,6 +107,8 @@ def find_valid_files(dir, extensions=None, max_dataset_size=float("inf")):
     Returns: found files, where each item is a tuple (id, ext)
 
     """
+    if isinstance(extensions, str):
+        extensions = [extensions]
     images = []
     assert os.path.isdir(dir), "%s is not a valid directory" % dir
 
