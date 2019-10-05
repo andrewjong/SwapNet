@@ -6,6 +6,13 @@ class TrainOptions(BaseOptions):
         super().__init__()
         self.is_train = True
         parser = self._parser
+        # override the model arg from base options, such that model is REQUIRED
+        parser.add_argument(
+            "--model",
+            help="which model to run",
+            choices=("warp", "texture", "pix2pix"),
+            required=True
+        )
         parser.add_argument(
             "--continue_train",
             action="store_true",

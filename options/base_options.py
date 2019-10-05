@@ -45,7 +45,6 @@ class BaseOptions:
             "--model",
             help="which model to run",
             choices=("warp", "texture", "pix2pix"),
-            required=True,
         )
         parser.add_argument(
             "--checkpoints_dir", default="./checkpoints", help="Where to save models"
@@ -128,8 +127,9 @@ class BaseOptions:
         )
         parser.add_argument(
             "--shuffle_data",
-            action="store_true",
-            help="whether to shuffle dataset (default is No)",
+            default=True,
+            type=bool,
+            help="whether to shuffle dataset (default is True)",
         )
         parser.add_argument(
             "--num_workers",

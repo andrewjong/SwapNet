@@ -115,7 +115,8 @@ class PromptOnce:
                     f"Are you sure you want to continue? (y/N): "
                 )
                 if a.lower().strip() != "y":
-                    raise e
+                    print("Did not receive confirmation. Exiting...")
+                    quit()
                 print()
                 PromptOnce.already_asked = True
 

@@ -91,7 +91,7 @@ class BaseModel(ABC):
             # load_suffix = (
             #     "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
             # )
-            self.load_checkpoint(opt.from_epoch)
+            self.load_checkpoint_dir(opt.from_epoch)
         else:
             opt.from_epoch = 0
         self.print_networks(opt.verbose)
@@ -175,7 +175,22 @@ class BaseModel(ABC):
                 optim = getattr(self, f"optimizer_{name}")
                 torch.save(optim.state_dict(), save_path)
 
-    def load_checkpoint(self, epoch):
+    def load_model_weights(self, model_name, weights_file):
+        """ Loads the weights for a single model
+
+        Args:
+            model_name: name of the model to load parameters into
+            weights_file: path to weights file
+        """
+        net = getattr(self, f"net_{model_name}")
+        print(f"loading the model {model_name} from {weights_file}")
+        state_dict = torch.load(weights_file, map_location=self.device)
+        if hasattr(state_dict, "_metadata"):
+            del state_dict._metadata
+
+        net.load_state_dict(state_dict)
+
+    def load_checkpoint_dir(self, epoch):
         """Load all the networks from the disk.
         Parameters:
             epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
@@ -184,13 +199,7 @@ class BaseModel(ABC):
             if isinstance(name, str):
                 load_filename = f"{epoch}_net_{name}.pth"
                 load_path = os.path.join(self.save_dir, load_filename)
-                net = getattr(self, f"net_{name}")
-                print(f"loading the model from {load_path}")
-                state_dict = torch.load(load_path, map_location=self.device)
-                if hasattr(state_dict, "_metadata"):
-                    del state_dict._metadata
-
-                net.load_state_dict(state_dict)
+                self.load_model_weights(name, load_path)
 
         if self.is_train:
             for name in self.optimizer_names:
