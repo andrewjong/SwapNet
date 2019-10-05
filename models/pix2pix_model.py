@@ -1,3 +1,4 @@
+from datasets.data_utils import unnormalize, scale_tensor
 from models import BaseModel
 import torch
 
@@ -35,7 +36,7 @@ class Pix2PixModel(BaseModel):
         # changing the default values to match the pix2pix paper (https://phillipi.github.io/pix2pix/)
         parser.set_defaults(norm='batch', netG='unet_128')
         if is_train:
-            parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--lambda_l1', type=float, default=100.0, help='weight for L1 loss')
             # gan mode choice
             parser.add_argument(
                 "--gan_mode",
@@ -98,6 +99,13 @@ class Pix2PixModel(BaseModel):
             )
             parser.add_argument('--beta1', type=float, default=0.5,
                                 help='momentum term of adam')
+            parser.add_argument(
+                "--gan_label_mode",
+                default="smooth",
+                choices=("hard", "smooth"),
+                help="whether to use hard (real 1.0 and fake 0.0) or smooth "
+                     "(real [0.7, 1.1] and fake [0., 0.3]) values for labels",
+            )
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
         return parser
 
@@ -110,10 +118,10 @@ class Pix2PixModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
+        self.loss_names = ['G', 'G_GAN', 'G_L1', 'D_real', 'D_fake']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
-        self.visual_names = ['real_A', 'fake_B', 'real_B']
-        self.visual_names = ['cloth_decoded', 'fake_B', 'real_B']
+        # self.visual_names = ['real_A', 'fake_B', 'real_B']
+        self.visual_names = ['cloth_decoded', 'fakes_scaled', 'textures_unnormalized']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
         if self.is_train:
             self.model_names = ['G', 'D']
@@ -127,7 +135,8 @@ class Pix2PixModel(BaseModel):
 
         if self.is_train:
             # define loss functions
-            self.criterionGAN = GANLoss(opt.gan_mode).to(self.device)
+            use_smooth = True if opt.gan_label_mode == "smooth" else False
+            self.criterionGAN = GANLoss(opt.gan_mode, smooth_labels=use_smooth).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -150,10 +159,14 @@ class Pix2PixModel(BaseModel):
         _, _, cloth_tensor, target_texture_tensor = input
         self.real_A = cloth_tensor.to(self.device)
         # self.real_A = torch.randn_like(cloth_tensor).to(self.device)
-        self.real_B = target_texture_tensor.to(self.device)
+        self.real_B = input["target_textures"].to(self.device)
 
     def compute_visuals(self):
         self.cloth_decoded = decode_cloth_labels(self.real_A)
+        self.fakes_scaled = scale_tensor(self.fake_B)
+        self.textures_unnormalized = unnormalize(
+            self.real_B, *self.opt.texture_norm_stats
+        )
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
@@ -180,7 +193,7 @@ class Pix2PixModel(BaseModel):
         pred_fake = self.net_D(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_l1
         # combine loss and calculate gradients
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
         self.loss_G.backward()

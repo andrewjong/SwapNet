@@ -8,7 +8,7 @@ import math
 
 import torch
 
-from modules import pix2pix_modules
+from modules import pix2pix_modules, get_norm_layer
 
 sys.path.append("../lib")
 from model.roi_layers import ROIAlign
@@ -157,6 +157,7 @@ class TextureModule(nn.Module):
         texture_channels=3,
         cloth_channels=19,
         num_roi=12,
+        norm_type="batch",
         dropout=0.5,
         unet_type="pix2pix",
         img_size=128,
@@ -176,8 +177,13 @@ class TextureModule(nn.Module):
             # fast log2 of img_size, int only. E.g. if size=128 => num_downs=7
             num_downs = math.frexp(img_size)[1] - 1
             use_dropout = True if dropout is not None else False
+            norm_layer = get_norm_layer(norm_type=norm_type)
             self.unet = pix2pix_modules.UnetGenerator(
-                channels + cloth_channels, texture_channels, num_downs, use_dropout=use_dropout
+                channels + cloth_channels,
+                texture_channels,
+                num_downs,
+                norm_layer=norm_layer,
+                use_dropout=use_dropout,
             )
         else:
             self.unet = nn.Sequential(

@@ -16,7 +16,18 @@ class GANLoss(nn.Module):
     that has the same size as the input.
     """
 
-    def __init__(self, gan_mode, target_real_label=1.0, target_fake_label=0.0):
+    default_real = 1.0
+    default_fake = 0
+    default_smooth_real = (0.7, 1.1)
+    default_smooth_fake = (0.0, 0.3)
+
+    def __init__(
+        self,
+        gan_mode,
+        smooth_labels=True,
+        target_real_label=None,
+        target_fake_label=None,
+    ):
         """ Initialize the GANLoss class.
 
         Parameters:
@@ -28,6 +39,15 @@ class GANLoss(nn.Module):
         LSGAN needs no sigmoid. vanilla GANs will handle it with BCEWithLogitsLoss.
         """
         super().__init__()
+        if target_real_label is None:
+            target_real_label = (
+                self.default_smooth_real if smooth_labels else self.default_real
+            )
+        if target_fake_label is None:
+            target_fake_label = (
+                self.default_smooth_fake if smooth_labels else self.default_fake
+            )
+
         self.register_buffer("real_label", torch.tensor(target_real_label))
         self.register_buffer("fake_label", torch.tensor(target_fake_label))
         self.gan_mode = gan_mode
@@ -41,6 +61,19 @@ class GANLoss(nn.Module):
         else:
             raise NotImplementedError("gan mode %s not implemented" % gan_mode)
 
+    @staticmethod
+    def rand_between(low, high, normal=False):
+        """
+        Args:
+            low: a torch.Tensor
+            high: a torch.Tensor
+            normal: whether to use normal distribution. if not, will use uniform
+
+        Returns: random tensor between low and high
+        """
+        rand_func = torch.randn if normal else torch.rand
+        return rand_func(1) * (high - low) + low
+
     def get_target_tensor(self, prediction, target_is_real):
         """Create label tensors with the same size as the input.
 
@@ -53,9 +86,23 @@ class GANLoss(nn.Module):
         """
 
         if target_is_real:
-            target_tensor = self.real_label
+            # smooth labels
+            if len(self.real_label) == 2:
+                low, high = self.real_label
+                target_tensor = GANLoss.rand_between(low, high).to(
+                    self.real_label.device
+                )
+            else:
+                target_tensor = self.real_label
         else:
-            target_tensor = self.fake_label
+            # smooth labels
+            if len(self.fake_label) == 2:
+                low, high = self.real_label
+                target_tensor = GANLoss.rand_between(low, high).to(
+                    self.fake_label.device
+                )
+            else:
+                target_tensor = self.fake_label
         return target_tensor.expand_as(prediction)
 
     def __call__(self, prediction, target_is_real):

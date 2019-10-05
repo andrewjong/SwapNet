@@ -30,9 +30,10 @@ class TextureModel(BaseGAN):
             parser.add_argument(
                 "--lambda_feat",
                 type=float,
-                default=100,
+                default=0,
                 help="weight for feature loss in final term",
             )
+            parser.set_defaults(display_ncols=5)
         return parser
 
     def __init__(self, opt):
@@ -45,7 +46,6 @@ class TextureModel(BaseGAN):
             "fakes",
             "fakes_scaled",
         ]
-
         if self.is_train:
             self.visual_names.append("targets_unnormalized")
             # Define additional loss for generator

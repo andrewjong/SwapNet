@@ -108,6 +108,7 @@ class PromptOnce:
     def makedirs(path, prompt=True):
         try:
             os.makedirs(path)
+            already_asked = True
         except FileExistsError as e:
             if prompt and len(os.listdir(path)) != 0 and not PromptOnce.already_asked:
                 a = input(

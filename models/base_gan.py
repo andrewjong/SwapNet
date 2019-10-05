@@ -77,10 +77,43 @@ class BaseGAN(BaseModel, ABC):
                 choices=("AdamW", "AdaBound"),
             )
             parser.add_argument(
+                "--lr",
+                "--g_lr",
+                "--learning_rate",
+                type=float,
+                # as recommended by "10 Lessons I Learned Training GANs For a Year"
+                default=0.0001,
+                help="initial learning rate for generator",
+            )
+            parser.add_argument('--beta1', type=float, default=0.5,
+                                help='momentum term of adam')
+            parser.add_argument(
                 "--optimizer_D",
                 help="optimizer for discriminator",
                 default="AdamW",
                 choices=("AdamW", "AdaBound"),
+            )
+            parser.add_argument(
+                "--d_lr",
+                type=float,
+                # as recommended by "10 Lessons I Learned Training GANs For a Year"
+                default=0.0004,
+                help="initial learning rate for Discriminator",
+            )
+            parser.add_argument(
+                "--d_wt_decay",
+                "--d_weight_decay",
+                dest="d_weight_decay",
+                default=0,
+                type=float,
+                help="optimizer L2 weight decay",
+            )
+            parser.add_argument(
+                "--gan_label_mode",
+                default="smooth",
+                choices=("hard", "smooth"),
+                help="whether to use hard (real 1.0 and fake 0.0) or smooth "
+                "(real [0.7, 1.1] and fake [0., 0.3]) values for labels",
             )
         return parser
 
@@ -110,7 +143,10 @@ class BaseGAN(BaseModel, ABC):
             self.model_names.append("discriminator")
 
             # setup GAN loss
-            self.criterion_GAN = modules.loss.GANLoss(opt.gan_mode).to(self.device)
+            use_smooth = True if opt.gan_label_mode == "smooth" else False
+            self.criterion_GAN = modules.loss.GANLoss(
+                opt.gan_mode, smooth_labels=use_smooth
+            ).to(self.device)
             self.loss_names = ["D", "D_real", "D_fake"]
             if any(gp_mode in opt.gan_mode for gp_mode in ["gp", "lp"]):
                 self.loss_names += ["D_gp"]

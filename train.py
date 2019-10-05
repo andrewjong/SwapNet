@@ -13,10 +13,6 @@ Example:
         python train.py --dataroot ./datasets/maps --name maps_cyclegan --model cycle_gan
     Train a pix2pix model:
         python train.py --dataroot ./datasets/facades --name facades_pix2pix --model pix2pix --direction BtoA
-
-See options/base_options.py and options/train_options.py for more training options.
-See training and test tips at: https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/docs/tips.md
-See frequently asked questions at: https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/docs/qa.md
 """
 from tqdm import tqdm
 import time
@@ -88,7 +84,7 @@ if __name__ == "__main__":
                     )
                     if opt.display_id > 0:
                         visualizer.plot_current_losses(
-                            epoch, float(epoch_iter) / dataset_size, losses
+                            epoch - 1, float(epoch_iter) / dataset_size, losses
                         )
                 if (
                     opt.latest_checkpoint_freq

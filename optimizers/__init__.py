@@ -49,7 +49,9 @@ def define_optimizer(parameters, opt, net: str) -> torch.optim.Optimizer:
     choice = getattr(opt, arg)
 
     # add optimizer kwargs
-    kwargs = {"lr": opt.lr, "weight_decay": opt.weight_decay}
+    lr = opt.d_lr if net == "D" else opt.lr
+    wd = opt.d_weight_decay if net == "D" else opt.weight_decay
+    kwargs = {"lr": lr, "weight_decay": wd, "betas": (opt.beta1, 0.999)}
     if choice == "AdaBound":
         kwargs["final_lr"] = opt.final_lr
 
