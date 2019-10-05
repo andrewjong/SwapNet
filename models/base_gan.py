@@ -16,8 +16,10 @@ class BaseGAN(BaseModel, ABC):
     def modify_commandline_options(parser: ArgumentParser, is_train):
         """
         Adds several GAN-related training arguments.
-        Child classes should call
-        >>> parser = super().modify_commandline_options(parser, is_train)
+        Child classes should call to extend this static method.
+        >>> parser = super(ChildClass, ChildClass).modify_commandline_options(
+        >>>    parser, is_train
+        >>> )
         """
         if is_train:
             # gan mode choice

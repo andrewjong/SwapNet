@@ -80,7 +80,7 @@ class TrainOptions(BaseOptions):
         )
         parser.add_argument(
             "--checkpoint_freq",
-            default=5,
+            default=2,
             type=int,
             help="how often to save checkpoints. negative numbers for middle of epoch",
         )

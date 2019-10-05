@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # create a dataset given opt.dataset_mode and other options
     dataset = create_dataset(opt)
     dataset_size = len(dataset)  # get the number of images in the dataset.
-    print("The number of training images = %d" % dataset_size)
+    print(f"The number of training images = {dataset_size:d}")
 
     model = create_model(opt)  # create a model given opt.model and other options
     model.setup(opt)  # regular setup: load and print networks; create schedulers
@@ -43,7 +43,9 @@ if __name__ == "__main__":
 
     # outer loop for different epochs;
     # we save the model by # <epoch_count>, <epoch_count>+<save_latest_freq>
-    for epoch in tqdm(range(opt.from_epoch + 1, opt.n_epochs + 1)):
+    for epoch in tqdm(
+        range(opt.from_epoch + 1, opt.n_epochs + 1), desc="Completed Epochs"
+    ):
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()  # timer for data loading per iteration
         # the number of training iterations in current epoch, reset to 0 every epoch
@@ -57,7 +59,7 @@ if __name__ == "__main__":
                 visualizer.reset()
                 total_iters += opt.batch_size
                 epoch_iter += opt.batch_size
-                model.set_input(data)  # unpack data from dataset and apply preprocessing
+                model.set_input(data)  # unpack data from dataset and preprocess
                 # calculate loss functions, get gradients, update network weights
                 model.optimize_parameters()
 
@@ -69,28 +71,41 @@ if __name__ == "__main__":
                         model.get_current_visuals(), epoch, save_result
                     )
 
+                losses = model.get_current_losses()
+                Visualizer.just_print_losses(
+                    epoch, losses, print_func=lambda m: pbar.set_description(m)
+                )
                 if total_iters % opt.print_freq == 0:
                     # print training losses and save logging information to the disk
-                    losses = model.get_current_losses()
                     t_comp = (time.time() - iter_start_time) / opt.batch_size
                     visualizer.print_current_losses(
-                        epoch, epoch_iter, losses, t_comp, t_data
+                        epoch,
+                        epoch_iter,
+                        losses,
+                        t_comp,
+                        t_data,
+                        print_func=lambda *args: None,
                     )
                     if opt.display_id > 0:
                         visualizer.plot_current_losses(
                             epoch, float(epoch_iter) / dataset_size, losses
                         )
-
-                if opt.latest_checkpoint_freq and total_iters % opt.latest_checkpoint_freq == 0:
+                if (
+                    opt.latest_checkpoint_freq
+                    and total_iters % opt.latest_checkpoint_freq == 0
+                ):
                     # cache our latest model every <save_latest_freq> iterations
                     print(
                         f"saving the latest model (epoch {epoch:d}, total_iters {total_iters:d}) "
                     )
-                    save_suffix = "iter_%d" % total_iters if opt.save_by_iter else f"latest"
+                    save_suffix = (
+                        "iter_%d" % total_iters if opt.save_by_iter else f"latest"
+                    )
                     model.save_checkpoint(save_suffix)
 
                 iter_data_time = time.time()
-                pbar.update(len(data[0]))
+                # weird unpacking to get the batch_size (we can't use opt.batch_size in case total len is not a multiple of batch_size
+                pbar.update(len(tuple(data.values())[0]))
 
         if opt.checkpoint_freq and epoch % opt.checkpoint_freq == 0:
             # cache our model every <save_epoch_freq> epochs
@@ -99,7 +114,6 @@ if __name__ == "__main__":
             )
             model.save_checkpoint("latest")
             model.save_checkpoint(epoch)
-
 
         # print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs, time.time() - epoch_start_time))
         # model.update_learning_rate()                     # update learning rates at the end of every epoch.

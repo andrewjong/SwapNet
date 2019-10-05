@@ -33,6 +33,11 @@ class BaseOptions:
             default="my_experiment",
             help="name of the experiment, determines where things are saved",
         )
+        parser.add_argument(
+            "--comments",
+            default="",
+            help="additional comments to add to this experiment, saved in args.json",
+        )
         parser.add_argument("--verbose", action="store_true")
         parser.add_argument(
             "--display_winsize",
