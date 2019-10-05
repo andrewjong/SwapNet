@@ -246,6 +246,14 @@ class TextureModule(nn.Module):
             encoded_tex, scale_factor=scale_factor
         )
 
+        # # DEBUG DEBUG: see if GAN works without textured input
+        # s = torch.sum(upsampled_tex).item()
+        # if s != 0:
+        #     print(
+        #         f"Warning!!! Input of 0 did not result in upsampled_tex of 0. Sum is {s}. Setting to 0s anyway"
+        #     )
+        # upsampled_tex = torch.zeros_like(upsampled_tex)
+
         # concat on the channel dimension
         tex_with_cloth = torch.cat((upsampled_tex, cloth), 1)
 

@@ -128,10 +128,10 @@ class Pix2PixModel(BaseModel):
         else:  # during test time, only load G
             self.model_names = ['G']
         # define networks (both generator and discriminator)
-        self.net_G = define_G(opt.cloth_channels, opt.texture_channels, 64, "unet_128", opt.norm, True, opt.init_type, opt.init_gain).to(self.device)
+        self.net_G = define_G(opt.cloth_channels + 36, opt.texture_channels, 64, "unet_128", opt.norm, True, opt.init_type, opt.init_gain).to(self.device)
 
         if self.is_train:  # define a discriminator; conditional GANs need to take both input and output images; Therefore, #channels for D is input_nc + output_nc
-            self.net_D = define_D(opt.cloth_channels + opt.texture_channels, 64, opt.discriminator, opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain).to(self.device)
+            self.net_D = define_D(opt.cloth_channels + 36 + opt.texture_channels, 64, opt.discriminator, opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain).to(self.device)
 
         if self.is_train:
             # define loss functions
@@ -155,9 +155,9 @@ class Pix2PixModel(BaseModel):
         # AtoB = self.opt.direction == 'AtoB'
         # self.real_A = input['A' if AtoB else 'B'].to(self.device)
         # self.real_B = input['B' if AtoB else 'A'].to(self.device)
+        to_concat = torch.zeros((self.opt.batch_size, 36, self.opt.crop_size, self.opt.crop_size), device=self.device)
+        self.real_A = torch.cat((to_concat, input["cloths"].to(self.device)), 1)
 
-        _, _, cloth_tensor, target_texture_tensor = input
-        self.real_A = cloth_tensor.to(self.device)
         # self.real_A = torch.randn_like(cloth_tensor).to(self.device)
         self.real_B = input["target_textures"].to(self.device)
 
