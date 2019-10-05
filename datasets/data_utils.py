@@ -177,7 +177,8 @@ def crop_tensors(*tensors, crop_bounds=((0, -1), (0, -1))):
     ret = []
     for t in tensors:
         ret.append(crop_tensor(t, crop_bounds))
-    return ret
+
+    return ret[0] if len(ret) == 1 else ret
 
 
 def crop_tensor(tensor: Tensor, crop_bounds):
