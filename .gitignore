@@ -3,6 +3,7 @@
 checkpoints 
 # actual data for datasets
 data 
+results
 
 
 # Byte-compiled / optimized / DLL files
