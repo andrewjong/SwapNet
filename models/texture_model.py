@@ -27,7 +27,7 @@ class TextureModel(BaseGAN):
             parser.add_argument(
                 "--lambda_l1",
                 type=float,
-                default=100,
+                default=10,
                 help="weight for L1 loss in final term",
             )
             parser.add_argument(

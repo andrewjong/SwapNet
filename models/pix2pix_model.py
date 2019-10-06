@@ -36,7 +36,7 @@ class Pix2PixModel(BaseModel):
         # changing the default values to match the pix2pix paper (https://phillipi.github.io/pix2pix/)
         parser.set_defaults(norm='batch', netG='unet_128')
         if is_train:
-            parser.add_argument('--lambda_l1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--lambda_l1', type=float, default=10, help='weight for L1 loss')
             # gan mode choice
             parser.add_argument(
                 "--gan_mode",
