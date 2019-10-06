@@ -34,6 +34,8 @@ If you'd like to take your own pictures, move the data into `data/YOUR_DATASET/t
 # Preprocessing
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
 
+I've preprocessed the Deep Fashion image dataset already. This can be downloaded here: https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj. If you want to use your own dataset, please follow the instructions below while substituting "deep_fashion" for the name of your dataset.
+
 ## Body Preprocessing
 The original paper cited [Unite the People](https://github.com/classner/up) (UP) to obtain body segmentations; however, I ran into trouble installing Caffe to make UP work (probably due to its age). 
 Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942) (NBF). [My fork of NBF](https://github.com/andrewjong/neural_body_fitting-for-SwapNet) modifies the code to output body segmentations and ROIs in the format that SwapNet requires. 
@@ -62,7 +64,7 @@ Train progress can be viewed by opening `localhost:8097` in your web browser.
 
 1) Train warp stage
 ```
-python train.py --name warp_stage --model warp --dataroot data/deep_fashion
+python train.py --name deep_fashion/warp --model warp --dataroot data/deep_fashion
 ```
 Sample visualization of warp stage:
 <p align="center">
@@ -71,7 +73,7 @@ Sample visualization of warp stage:
 
 2) Train texture stage
 ```
-python train.py --name texture_stage --model texture --dataroot data/deep_fashion
+python train.py --name deep_fashion/texture --model texture --dataroot data/deep_fashion
 ```
 Below is an example of train progress visualization in Visdom. The texture stage draws the input texture with ROI 
 boundaries (left most), the input cloth segmentation (second from left), the generated 
@@ -79,17 +81,58 @@ output, and target texture (right most).
 
 <p align="center">
 <img src="media/texture_train_example.png" alt="texture example" width=600>
+<img src="media/texture_custom_data_example.png" alt="texture example" width=600>
 </p>
 
 # Inference
 Inference will run the warp stage and texture stage in series.
 
+To run inference on deep fashion, run this command:
 ```
-python inference.py --warp_checkpoint checkpoints/warp_stage/[generator_name.pth] \
-  --texture_checkpoint checkpoints/texture_stage/[generator_name.pth] \
+python inference.py --checkpoint checkpoints/deep_fashion \
+  --dataroot data/deep_fashion \
+  --shuffle_data True
+```
+`--shuffle_data True` ensures that bodys are matched with different clothing for the transfer. 
+By default, only 50 images are run for inference. This can be increased by setting the value of `--max_dataset_size`.
+
+
+Alternatively, to translate clothes from a specific source to a specific target:
+```
+python inference.py --checkpoint checkpoints/deep_fashion \
   --cloth_dir [SOURCE] --texture_dir [SOURCE] --body_dir [TARGET]
 ```
 Where SOURCE contains the clothing you want to transfer, and TARGET contains the person to place clothing on.
+
+# Comparisons to Original SwapNet
+### Similarities
+- Warp Stage
+  - [x] Per-channel random affine augmentation for cloth inputs
+  - [x] RGB images for body segmentations
+  - [x] Dual U-Net warp architecture
+  - [x] Warp loss (cross-entropy plus small adversarial loss)
+- Texture Stage
+  - [x] ROI pooling
+  - [x] Texture module architecture
+  - mostly everything else is the same
+
+### Differences
+- Warp Stage
+  - Body segmentation: Neural Body Fitting instead of Unite the People
+  - I store cloth segmentations as a flat 2D map of numeric labels, then expand this into 1-hot encoded tensors at runtime. In the original SwapNet, they used probability maps, but this took up too much storage space (tens of dozens of GB) on my computer.
+  - Option to train on video data. For video data, the different frames provide additional "augmentation" for input cloth in the warp stage.
+- Texture Stage
+  - cloth segmentation network: LIP_JPPNet instead of LIP_SSL
+  - Currently VGG feature loss prevents convergence, need to debug this
+- Overall
+  - Hyperparameters most likely. The hyperparameters were not listed in the original paper, so I had to experiment with these values.
+  - Implemented random label smoothing for better GAN stability
+
+### TODO:
+- [ ] Copy face data from target to generated output during inference ("we copy the face and hair pixels from B into the result")
+- [ ] Match texture quality produced in original paper (likely due to Feature Loss)
+- [ ] Test DRAGAN penalty and other advanced GAN losses
+
 
 # Credits
 - The layout of this repository is strongly influenced by Jun-Yan Zhu's [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) repository, though I've implemented significant changes. Many thanks to their team for open sourcing their code.
