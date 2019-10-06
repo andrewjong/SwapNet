@@ -69,12 +69,12 @@ for d in args.data_dir:
             return False
 
     stats = {
-        "path": args.data_dir.split(os.path.sep)[-1],
+        "path": d.split(os.path.sep)[-1],
         "means": mean,
         "stds": std
     }
 
-    of = os.path.join(args.data_dir, "..", args.output_file)
+    of = os.path.join(d, "..", args.output_file)
 
     with open(of, "a") as f:
         f.write(json.dumps(stats) + "\n")
