@@ -33,6 +33,7 @@ class TextureModel(BaseGAN):
                 default=0,
                 help="weight for feature loss in final term",
             )
+            # based on the num entries in self.visual_names during training
             parser.set_defaults(display_ncols=5)
         return parser
 

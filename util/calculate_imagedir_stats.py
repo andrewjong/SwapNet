@@ -46,33 +46,37 @@ def cal_dir_stat(root):
     return rgb_mean, rgb_std
 
 parser = argparse.ArgumentParser()
-parser.add_argument("data_dir")
+parser.add_argument("data_dir", nargs="+")
 parser.add_argument("--output_file", help="file to append output to", default="normalization_stats.json")
 args = parser.parse_args()
 
 # The script assumes that under train_root, there are separate directories for each class
 # of training images.
-train_root = args.data_dir
-start = timeit.default_timer()
-mean, std = cal_dir_stat(train_root)
-end = timeit.default_timer()
-print("elapsed time: {}".format(end - start))
-print("mean:{}\nstd:{}".format(mean, std))
+for d in args.data_dir:
+    print("Calculating stats for", d)
+    train_root = d
+    start = timeit.default_timer()
+    mean, std = cal_dir_stat(train_root)
+    end = timeit.default_timer()
+    print("elapsed time: {}".format(end - start))
+    print("mean:{}\nstd:{}".format(mean, std))
 
-def file_has_lines(f):
-    for i, _ in enumerate(f):
-        if i > 1:
-            return True
-    else:
-        return False
+    def file_has_lines(f):
+        for i, _ in enumerate(f):
+            if i > 1:
+                return True
+        else:
+            return False
 
-stats = {
-    "path": args.data_dir.split(os.path.sep)[-1],
-    "means": mean,
-    "stds": std
-}
+    stats = {
+        "path": args.data_dir.split(os.path.sep)[-1],
+        "means": mean,
+        "stds": std
+    }
 
-of = os.path.join(args.data_dir, "..", args.output_file)
+    of = os.path.join(args.data_dir, "..", args.output_file)
 
-with open(of, "a") as f:
-    f.write(json.dumps(stats) + "\n")
+    with open(of, "a") as f:
+        f.write(json.dumps(stats) + "\n")
+
+print("Done!")

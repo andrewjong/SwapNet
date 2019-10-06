@@ -31,6 +31,8 @@ class WarpModel(BaseGAN):
                 default=100,
                 help="weight for cross entropy loss in final term",
             )
+            # based on the num entries in self.visual_names during training
+            parser.set_defaults(display_ncols=4)
         # https://stackoverflow.com/questions/26788214/super-and-staticmethod-interaction
         parser = super(WarpModel, WarpModel).modify_commandline_options(
             parser, is_train

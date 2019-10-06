@@ -1,4 +1,4 @@
-name: outfit
+name: swapnet
 channels:
   - pytorch
   - defaults
@@ -104,9 +104,12 @@ dependencies:
   - zstd=1.3.7=h0b5b093_0
   - pip:
     - adabound==0.0.5
+    - chardet==3.0.4
     - cycler==0.10.0
     - cython==0.29.6
+    - dominate==2.4.0
     - easydict==1.9
+    - idna==2.8
     - kiwisolver==1.0.1
     - matplotlib==3.0.3
     - msgpack==0.6.1
@@ -116,6 +119,11 @@ dependencies:
     - pyparsing==2.3.1
     - pytz==2019.1
     - pyyaml==5.1
+    - requests==2.22.0
     - scipy==1.2.1
     - tensorboardx==1.6
+    - torchfile==0.1.0
     - tqdm==4.31.1
+    - urllib3==1.25.3
+    - visdom==0.1.8.8
+    - websocket-client==0.56.0
