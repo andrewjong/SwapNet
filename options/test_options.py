@@ -52,10 +52,10 @@ class TestOptions(BaseOptions):
             help="folder to output intermediate and final results",
         )
         parser.add_argument(
-            "--visualize_intermediates",
+            "--skip_intermediates",
             action="store_true",
-            help="additionally save intermediate cloth visuals as images for warp "
-            "stage (instead of just .npz files)",
+            help="choose not to save intermediate cloth visuals as images for warp "
+            "stage (instead, just save .npz files)",
         )
 
         # remove arguments

@@ -62,6 +62,7 @@ class CappedDataLoader:
         """
         self.opt = opt
         dname = opt.dataset if opt.dataset else opt.model
+        print(f"Creating dataset {dname}...", end=" ")
         dataset_class = find_dataset_using_name(dname)
         self.dataset = dataset_class(opt, **ds_kwargs)
         print(f"dataset [{type(self.dataset).__name__}] was created")

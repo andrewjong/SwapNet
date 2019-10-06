@@ -19,7 +19,7 @@ TEXTURE_SUBDIR = "texture"
 # AND DEPEND ON GLOBAL VARIABLES UNDER MAIN
 
 
-def _setup(subfolder_name):
+def _setup(subfolder_name, create_webpage=True):
     """
     Setup outdir, create a webpage
     Args:
@@ -31,7 +31,7 @@ def _setup(subfolder_name):
     out_dir = get_out_dir(subfolder_name)
     PromptOnce.makedirs(out_dir, not opt.no_confirm)
     webpage = None
-    if not opt.warp_checkpoint or opt.visualize_intermediates:
+    if create_webpage:
         webpage = html.HTML(
             out_dir,
             f"Experiment = {opt.name}, Phase = {subfolder_name} inference, "
@@ -66,9 +66,8 @@ def _rebuild_from_checkpoint(checkpoint_file, same_crop_load_size=False, **ds_kw
     if same_crop_load_size:  # need to override this if we're using intermediates
         loaded_opt.load_size = loaded_opt.crop_size
     model = create_model(loaded_opt)
-    model.load_model_weights(
-        "generator", checkpoint_file
-    ).eval()  # loads the checkpoint
+    # loads the checkpoint
+    model.load_model_weights("generator", checkpoint_file).eval()
     model.print_networks(opt.verbose)
 
     dataset = create_dataset(loaded_opt, **ds_kwargs)
@@ -141,11 +140,11 @@ def _run_warp():
     """
     Runs the warp stage
     """
+    warp_out, webpage = _setup(WARP_SUBDIR, create_webpage=not opt.skip_intermediates)
 
-    warp_out, webpage = _setup(WARP_SUBDIR)
-
+    print(f"Rebuilding warp from {opt.warp_checkpoint}")
     warp_model, warp_dataset = _rebuild_from_checkpoint(
-        opt.warp_checkpoint, body_dir=opt.body_dir, cloth_dir=opt.cloth_dir
+        opt.warp_checkpoint, cloth_dir=opt.cloth_dir, body_dir=opt.body_dir
     )
 
     def save_cloths_npz(local):
@@ -159,9 +158,15 @@ def _run_warp():
         # save the warped cloths
         compress_and_save_cloth(local["model"].fakes[0], out_name)
 
-    _run_test_loop(
-        warp_model, warp_dataset, webpage, iteration_post_hook=save_cloths_npz
-    )
+    print(f"Warping cloth to match body segmentations in {opt.body_dir}...")
+
+    try:
+        _run_test_loop(
+            warp_model, warp_dataset, webpage, iteration_post_hook=save_cloths_npz
+        )
+    except KeyboardInterrupt:
+        print("Ending warp early.")
+    print(f"Warp results stored in {warp_out}")
 
 
 def _run_texture():
@@ -169,13 +174,14 @@ def _run_texture():
     Runs the texture stage. If opt.warp_checkpoint is also True, then it will use those
     intermediate cloth outputs as the texture stage's input.
     """
-    _, webpage = _setup(TEXTURE_SUBDIR)
+    texture_out, webpage = _setup(TEXTURE_SUBDIR, create_webpage=True)
 
     if opt.warp_checkpoint:  # if intermediate, cloth dir is the warped cloths
         cloth_dir = get_out_dir(WARP_SUBDIR)
     else:  # otherwise if texture checkpoint alone, use what the user specified
         cloth_dir = opt.cloth_dir
 
+    print(f"Rebuilding texture from {opt.texture_checkpoint}")
     texture_model, texture_dataset = _rebuild_from_checkpoint(
         opt.texture_checkpoint,
         same_crop_load_size=True if opt.warp_checkpoint else False,
@@ -183,7 +189,12 @@ def _run_texture():
         cloth_dir=cloth_dir,
     )
 
-    _run_test_loop(texture_model, texture_dataset, webpage)
+    print(f"Texturing cloth segmentations in {cloth_dir}...")
+    try:
+        _run_test_loop(texture_model, texture_dataset, webpage)
+    except KeyboardInterrupt:
+        print("Ending texture early.")
+    print(f"Textured results stored in {texture_out}")
 
 
 if __name__ == "__main__":
