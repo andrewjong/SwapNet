@@ -166,7 +166,7 @@ def change_extension(fname, ext1, ext2):
     return fname[: -len(ext1)] + ext2
 
 
-def crop_tensors(*tensors, crop_bounds=((0, -1), (0, -1))):
+def crop_tensors(*tensors, crop_bounds=((0, 0), (-1, -1))):
     """
     Crop multiple tensors
     Args:
@@ -187,11 +187,11 @@ def crop_tensor(tensor: Tensor, crop_bounds):
     """
     Crops a tensor at the given crop bounds.
     :param tensor:
-    :param crop_bounds: ((h_min, h_max), (w_min,w_max))
+    :param crop_bounds: (x_min, y_min), (x_max, y_max)
     :return:
     """
-    (h_min, h_max), (w_min, w_max) = crop_bounds
-    return tensor[:, h_min:h_max, w_min:w_max]
+    (x_min, y_min), (x_max, y_max) = crop_bounds
+    return tensor[:, y_min:y_max, x_min:x_max]
 
 
 def crop_rois(rois, crop_bounds):
@@ -220,15 +220,15 @@ def crop_rois(rois, crop_bounds):
 
     if crop_bounds is not None:
         rois = copy(rois)
-        (h_min, h_max), (w_min, w_max) = crop_bounds
+        (x_min, y_min), (x_max, y_max) = crop_bounds
         # clip the x-axis to be within bounds. xmin and xmax index
-        xs = rois[:, (0, 2)]
-        xs = clip(xs, w_min, w_max - 1)
-        xs -= min(xs, 0)  # translate
+        xs = rois[:, [0, 2]]
+        xs = clip(xs, x_min, x_max - 1)
+        xs -= x_min
         # clip the y-axis to be within bounds. ymin and ymax index
         ys = rois[:, (1, 3)]
-        ys = clip(ys, h_min, h_max - 1)
-        ys -= min(ys, 0)  # translate
+        ys = clip(ys, y_min, y_max - 1)
+        ys -= y_min
         # put it back together again
         rois = stack((xs[:, 0], ys[:, 0], xs[:, 1], ys[:, 1]), 1)
     return rois
@@ -286,10 +286,11 @@ def flip_rois_(rois, axis, center):
     # put side by side
     values = torch.stack((rois[:, min_idx], rois[:, max_idx]))
     # compute the flip
-    delta = center - values
-    flipped = center + delta
+    values -= center
+    values *= -1
+    values += center
     # max and min are now swapped because we flipped
-    max, min = torch.chunk(flipped, 2)
+    max, min = torch.chunk(values, 2)
     # put them back in
     rois[:, min_idx], rois[:, max_idx] = min, max
 

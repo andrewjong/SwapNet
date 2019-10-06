@@ -113,7 +113,8 @@ class TextureDataset(BaseDataset):
         ).squeeze()
 
         # (3) Get and scale corresponding roi.
-        scale = float(self.opt.load_size) / target_texture_img.size[0]
+        original_size = target_texture_img.size[0]  # PIL width
+        scale = float(self.opt.load_size) / original_size
         rois = np.rint(self.rois_df.loc[file_id].values * scale)
         rois_tensor = torch.from_numpy(rois)
 

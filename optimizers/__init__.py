@@ -24,7 +24,7 @@ def get_options_modifier(optimizer_name):
 
 def adam_modifier(parser: ArgumentParser, *_):
     parser.add_argument("--b1", type=float, default=0.9, help="Adam b1")
-    parser.add_argument("--b2", type=float, default=0.99, help="Adam b2")
+    parser.add_argument("--b2", type=float, default=0.999, help="Adam b2")
     return parser
 
 
@@ -51,7 +51,7 @@ def define_optimizer(parameters, opt, net: str) -> torch.optim.Optimizer:
     # add optimizer kwargs
     lr = opt.d_lr if net == "D" else opt.lr
     wd = opt.d_weight_decay if net == "D" else opt.weight_decay
-    kwargs = {"lr": lr, "weight_decay": wd, "betas": (opt.beta1, 0.999)}
+    kwargs = {"lr": lr, "weight_decay": wd, "betas": (opt.b1, opt.b2)}
     if choice == "AdaBound":
         kwargs["final_lr"] = opt.final_lr
 

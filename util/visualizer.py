@@ -4,6 +4,7 @@ import sys
 import ntpath
 import time
 
+import torch
 from datasets.data_utils import remove_extension
 from . import util, html
 from subprocess import Popen, PIPE

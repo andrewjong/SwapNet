@@ -7,7 +7,8 @@ import os
 
 
 def tensor2im(input_image, imtype=np.uint8):
-    """"Converts a Tensor array into a numpy image array.
+    """"Converts a Tensor array into a numpy image array. If there are multiple images
+    in the batch, simply converts and returns the first
 
     Parameters:
         input_image (tensor) --  the input image tensor array
@@ -18,15 +19,15 @@ def tensor2im(input_image, imtype=np.uint8):
             image_tensor = input_image.data
         else:
             return input_image
-        image_numpy: np.ndarray = image_tensor[
-            0
-        ].cpu().float().numpy()  # convert it into a numpy array
+        # select the first and convert it into a numpy array
+        image_numpy: np.ndarray = image_tensor[0].cpu().float().numpy()
         if image_numpy.shape[0] == 1:  # grayscale to RGB
             image_numpy = np.tile(image_numpy, (3, 1, 1))
-        image_numpy = (
-            (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
-        )  # post-processing: tranpose and scaling
-    else:  # if it is a numpy array, do nothing
+        # post-processing: tranpose and scaling
+        image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+    else:  # if it is a numpy array
+        if len(input_image.shape) == 4:  # select first in batch
+            input_image = input_image[0]
         image_numpy = input_image
     return image_numpy.astype(imtype)
 

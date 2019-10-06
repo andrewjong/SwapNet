@@ -1,4 +1,6 @@
 from argparse import ArgumentParser
+from PIL import Image, ImageDraw
+from util.draw_rois import draw_rois_on_texture
 
 import torch
 from torch import nn
@@ -8,6 +10,7 @@ from datasets.data_utils import unnormalize, scale_tensor
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import TextureModule
 from util.decode_labels import decode_cloth_labels
+from util.util import tensor2im
 
 
 class TextureModel(BaseGAN):
@@ -61,6 +64,9 @@ class TextureModel(BaseGAN):
         self.textures_unnormalized = unnormalize(
             self.textures, *self.opt.texture_norm_stats
         )
+        self.textures_unnormalized = draw_rois_on_texture(
+            self.rois, self.textures_unnormalized
+        )
         self.cloths_decoded = decode_cloth_labels(self.cloths)
 
         self.fakes_scaled = scale_tensor(self.fakes, scale_each=True)
@@ -81,7 +87,7 @@ class TextureModel(BaseGAN):
             cloth_channels=self.opt.cloth_channels,
             num_roi=self.opt.body_channels,
             img_size=self.opt.crop_size,
-            norm_type=self.opt.norm
+            norm_type=self.opt.norm,
         )
 
     def set_input(self, input):

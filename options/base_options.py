@@ -121,7 +121,7 @@ class BaseOptions:
         )
         parser.add_argument(
             "--crop_bounds",
-            help="DO NOT USE WITH --crop_size. crop images to a region: ((hmin, hmax), (wmin, wmax))",
+            help="DO NOT USE WITH --crop_size. crop images to a region: ((xmin, ymin), (xmax, ymax))",
         )
         # == ITERATION PROPERTIES ==
         parser.add_argument(
