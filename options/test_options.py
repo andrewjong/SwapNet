@@ -28,23 +28,28 @@ class TestOptions(BaseOptions):
             "texture stage containing args.json file",
         )
         parser.add_argument(
+            "--checkpoint",
+            help="Shorthand for both warp and texture checkpoint to use the 'latest' "
+                 "generator file (or specify using --load_epoch). This should be the "
+                 "root dir containing warp/ and texture/ checkpoint folders.",
+        )
+        parser.add_argument(
             "--body_dir",
-            required=False,  # don't require in case only running texture stage
             help="Directory to use as target bodys for where the cloth will be placed "
             "on. If same directory as --cloth_root, use --shuffle_data to achieve "
-            "clothing transfer",
+            "clothing transfer. If not provided, will uses --dataroot/body",
         )
         parser.add_argument(
             "--cloth_dir",
-            required=True,
             help="Directory to use for the clothing source. If same directory as "
-            "--body_root, use --shuffle_data to achieve clothing transfer",
+            "--body_root, use --shuffle_data to achieve clothing transfer. If not "
+            "provided, will use --dataroot/cloth",
         )
         parser.add_argument(
             "--texture_dir",
-            required=False,  # don't require in case only running warp stage
             help="Directory to use for the clothing source. If same directory as "
-            "--body_root, use --shuffle_data to achieve clothing transfer",
+            "--body_root, use --shuffle_data to achieve clothing transfer. If not "
+            "provided, will use --dataroot/texture",
         )
         parser.add_argument(
             "--results_dir",
@@ -58,8 +63,12 @@ class TestOptions(BaseOptions):
             "stage (instead, just save .npz files)",
         )
 
+        parser.add_argument(
+            "--dataroot",
+            required=False,
+            help="path to dataroot if cloth, body, and texture not individually specified",
+        )
         # remove arguments
-        parser.add_argument("--dataroot", help=argparse.SUPPRESS)  # remove dataroot arg
         parser.add_argument(
             "--model", help=argparse.SUPPRESS
         )  # remove model as we restore from checkpoint
@@ -71,10 +80,17 @@ class TestOptions(BaseOptions):
     def _validate(opt):
         super(TestOptions, TestOptions)._validate(opt)
 
-        if opt.warp_checkpoint and not opt.body_dir:
-            raise ValueError("Warp stage must have body_dir")
-        if opt.texture_checkpoint and not opt.texture_dir:
-            raise ValueError("Texture stage must have texture_dir")
+        if not (opt.body_dir or opt.cloth_dir or opt.texture_dir or opt.dataroot):
+            raise ValueError(
+                "Must either (1) specify --dataroot, or (2) --body_dir, --cloth_dir, "
+                "and --texture_dir individually"
+            )
+
+        if not opt.dataroot:
+            if opt.warp_checkpoint and not opt.body_dir:
+                raise ValueError("Warp stage must have body_dir")
+            if opt.texture_checkpoint and not opt.texture_dir:
+                raise ValueError("Texture stage must have texture_dir")
 
         if not opt.warp_checkpoint and not opt.texture_checkpoint:
             raise ValueError("Must set either warp_checkpoint or texture_checkpoint")

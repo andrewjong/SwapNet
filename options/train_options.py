@@ -75,6 +75,9 @@ class TrainOptions(BaseOptions):
             "--n_epochs", "--num_epochs", default=20, type=int, help="number of epochs to train until"
         )
         parser.add_argument(
+            "--start_epoch", type=int, default=0, help="epoch to start training from"
+        )
+        parser.add_argument(
             "--sample_freq",
             help="how often to sample and save image results from the generator",
         )

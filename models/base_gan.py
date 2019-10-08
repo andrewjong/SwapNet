@@ -72,6 +72,8 @@ class BaseGAN(BaseModel, ABC):
             # optimizer choice
             parser.add_argument(
                 "--optimizer_G",
+                "--opt_G",
+                "--optim_G",
                 help="optimizer for generator",
                 default="AdamW",
                 choices=("AdamW", "AdaBound"),
@@ -89,6 +91,8 @@ class BaseGAN(BaseModel, ABC):
                                 help='momentum term of adam')
             parser.add_argument(
                 "--optimizer_D",
+                "--opt_D",
+                "--optim_D",
                 help="optimizer for discriminator",
                 default="AdamW",
                 choices=("AdamW", "AdaBound"),

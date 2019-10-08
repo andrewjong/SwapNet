@@ -88,12 +88,7 @@ class BaseModel(ABC):
         # if self.is_train:
         #     self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
         if not self.is_train or opt.continue_train:
-            # load_suffix = (
-            #     "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.from_epoch
-            # )
-            self.load_checkpoint_dir(opt.from_epoch)
-        else:
-            opt.from_epoch = 0
+            self.load_checkpoint_dir(opt.load_epoch)
         self.print_networks(opt.verbose)
         return self
 
@@ -153,6 +148,8 @@ class BaseModel(ABC):
 
     def save_checkpoint(self, epoch):
         """Save all the networks to the disk.
+
+        Or save latest.
         Parameters:
             epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
         """
@@ -208,7 +205,7 @@ class BaseModel(ABC):
                     load_filename = f"{epoch}_optim_{name}.pth"
                     load_path = os.path.join(self.save_dir, load_filename)
                     optim = getattr(self, f"optimizer_{name}")
-                    print(f"loading the optimizer from {load_path}")
+                    print(f"loading the optimizer {name} from {load_path}")
                     state_dict = torch.load(load_path)
                     if hasattr(state_dict, "_metadata"):
                         del state_dict._metadata

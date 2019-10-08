@@ -21,7 +21,7 @@ class BaseOptions:
     def __init__(self):
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            conflict_handler="resolve"
+            conflict_handler="resolve",
         )
         # == EXPERIMENT SETUP ==
         parser.add_argument(
@@ -47,15 +47,16 @@ class BaseOptions:
         )
         # == MODEL INIT / LOADING / SAVING ==
         parser.add_argument(
-            "--model",
-            help="which model to run",
-            choices=("warp", "texture", "pix2pix"),
+            "--model", help="which model to run", choices=("warp", "texture", "pix2pix")
         )
         parser.add_argument(
             "--checkpoints_dir", default="./checkpoints", help="Where to save models"
         )
         parser.add_argument(
-            "--from_epoch", default="latest", help="epoch to load, 'latest' for latest"
+            "--load_epoch",
+            default="latest",
+            help="epoch to load (use with --continue_train or for inference, 'latest' "
+                 "for latest ",
         )
         # == DATA / IMAGE LOADING ==
         parser.add_argument(
@@ -71,14 +72,16 @@ class BaseOptions:
             "--dataset_mode",
             default="image",
             choices=("image", "video"),
-            help="how data is formatted",
+            help="how data is formatted. video mode allows additional source inputs"
+                 "from other frames of the video",
         )
         # channels
         parser.add_argument(
             "--cloth_representation",
             default="labels",  # default according to SwapNet
             choices=("rgb", "labels"),
-            help="which representation the cloth segmentations are in. 'labels' means a 2D tensor where each value is the cloth label. 'rgb' ",
+            help="which representation the cloth segmentations are in. 'labels' means "
+                 "a 2D tensor where each value is the cloth label. 'rgb' ",
         )
         parser.add_argument(
             "--body_representation",
@@ -128,7 +131,7 @@ class BaseOptions:
             "--max_dataset_size", type=int, default=float("inf"), help="cap on data"
         )
         parser.add_argument(
-            "--batch_size", type=int, default=4, help="batch size to load data"
+            "--batch_size", type=int, default=8, help="batch size to load data"
         )
         parser.add_argument(
             "--shuffle_data",
@@ -162,6 +165,7 @@ class BaseOptions:
         # basic options
         opt, _ = parser.parse_known_args()
         parser.set_defaults(dataset=opt.model)
+        opt.batch_size
 
         # modify options for each arg that can do so
         modifiers = ["model", "dataset"]
@@ -183,7 +187,6 @@ class BaseOptions:
 
         self._parser = parser
         final_opt = self._parser.parse_args()
-        final_opt.from_epoch = int(final_opt.from_epoch)
         return final_opt
 
     @staticmethod
@@ -276,7 +279,9 @@ class BaseOptions:
         # if the user specifies arguments on the command line, don't override these
         if user_overrides:
             user_args = filter(lambda a: a.startswith("--"), sys.argv[1:])
-            user_args = set([a.lstrip("-") for a in user_args])  # get rid of left dashes
+            user_args = set(
+                [a.lstrip("-") for a in user_args]
+            )  # get rid of left dashes
             print("Not overriding:", user_args)
 
         # override default options with values in config file

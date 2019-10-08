@@ -1,18 +1,22 @@
-"""General-purpose training script for image-to-image translation.
+"""
+General-purpose training script for image-to-image translation, adapted for SwapNet.
 
-This script works for various models (with option '--model': e.g., pix2pix, cyclegan, colorization) and
-different datasets (with option '--dataset_mode': e.g., aligned, unaligned, single, colorization).
-You need to specify the dataset ('--dataroot'), experiment name ('--name'), and model ('--model').
+This script works for various models (with option '--model': e.g., pix2pix, cyclegan,
+colorization) and different datasets (with option '--dataset_mode': e.g., image, video).
+You need to specify the dataset ('--dataroot'), experiment name ('--name'), and model
+('--model').
 
-It first creates model, dataset, and visualizer given the option.
-It then does standard network training. During the training, it also visualize/save the images, print/save the loss plot, and save models.
-The script supports continue/resume training. Use '--continue_train' to resume your previous training.
+It first creates the model, dataset, and visualizer given the options.
+It then does standard network training. During the training, it also visualize/save
+the images, print/save the loss plot, and save models.
+The script supports continue/resume training. Use '--continue_train' to resume your
+previous training.
 
 Example:
-    Train a CycleGAN model:
-        python train.py --dataroot ./datasets/maps --name maps_cyclegan --model cycle_gan
-    Train a pix2pix model:
-        python train.py --dataroot ./datasets/facades --name facades_pix2pix --model pix2pix --direction BtoA
+    Train the warp model:
+        python train.py --name warp_stage --model warp --dataroot data/deep_fashion
+    Train the texture model:
+        python train.py --name texture_stage --model texture --dataroot data/deep_fashion
 """
 from tqdm import tqdm
 import time
@@ -40,7 +44,7 @@ if __name__ == "__main__":
     # outer loop for different epochs;
     # we save the model by # <epoch_count>, <epoch_count>+<save_latest_freq>
     for epoch in tqdm(
-        range(opt.from_epoch + 1, opt.n_epochs + 1), desc="Completed Epochs"
+        range(opt.start_epoch + 1, opt.n_epochs + 1), desc="Completed Epochs"
     ):
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()  # timer for data loading per iteration
@@ -94,10 +98,10 @@ if __name__ == "__main__":
                     print(
                         f"saving the latest model (epoch {epoch:d}, total_iters {total_iters:d}) "
                     )
-                    save_suffix = (
+                    save_prefix = (
                         "iter_%d" % total_iters if opt.save_by_iter else f"latest"
                     )
-                    model.save_checkpoint(save_suffix)
+                    model.save_checkpoint(save_prefix)
 
                 iter_data_time = time.time()
                 # weird unpacking to get the batch_size (we can't use opt.batch_size in case total len is not a multiple of batch_size

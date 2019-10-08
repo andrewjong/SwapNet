@@ -109,15 +109,18 @@ class PromptOnce:
     def makedirs(path, prompt=True):
         try:
             os.makedirs(path)
-            already_asked = True
+            PromptOnce.already_asked = True
         except FileExistsError as e:
             if prompt and len(os.listdir(path)) != 0 and not PromptOnce.already_asked:
+                print(f"The experiment directory '{path}' already exists.")
+                print(" Here are its contents:")
+                print("\t", os.listdir(path))
                 a = input(
-                    f"The experiment directory {path} already exists.\n"
-                    f"Are you sure you want to continue? (y/N): "
+                    f"\n Existing data will be overwritten!\n"
+                    f" Are you sure you want to continue? (y/N): "
                 )
                 if a.lower().strip() != "y":
-                    print("Did not receive confirmation. Exiting...")
+                    print(" Did not receive confirmation to overwrite. Exiting...")
                     quit()
                 print()
                 PromptOnce.already_asked = True

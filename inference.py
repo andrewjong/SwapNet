@@ -35,7 +35,7 @@ def _setup(subfolder_name, create_webpage=True):
         webpage = html.HTML(
             out_dir,
             f"Experiment = {opt.name}, Phase = {subfolder_name} inference, "
-            f"Loaded Epoch = {opt.from_epoch}",
+            f"Loaded Epoch = {opt.load_epoch}",
         )
     return out_dir, webpage
 
@@ -202,10 +202,31 @@ if __name__ == "__main__":
     config.parse()
     opt = config.opt
 
+    # override checkpoint options
+    if opt.checkpoint:
+        if not opt.warp_checkpoint:
+            opt.warp_checkpoint = os.path.join(
+                opt.checkpoint, "warp", f"{opt.load_epoch}_net_generator.pth"
+            )
+            print("Set warp_checkpoint to", opt.warp_checkpoint)
+        if not opt.texture_checkpoint:
+            opt.texture_checkpoint = os.path.join(
+                opt.checkpoint, "texture", f"{opt.load_epoch}_net_generator.pth"
+            )
+            print("Set texture_checkpoint to", opt.texture_checkpoint)
+
+    # use dataroot if not individually provided
+    for subdir in ("body", "cloth", "texture"):
+        attribute = f"{subdir}_dir"
+        if not getattr(opt, attribute):
+            setattr(opt, attribute, os.path.join(opt.dataroot, subdir))
+
+    # Run warp stage
     if opt.warp_checkpoint:
         print("Running warp inference...")
         _run_warp()
 
+    # Run texture stage
     if opt.texture_checkpoint:
         print("Running texture inference...")
         _run_texture()
