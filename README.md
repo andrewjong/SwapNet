@@ -26,15 +26,15 @@ The following must then be added from preprocessing(see the Preprocessing sectio
 The images under 
 
 ## Deep Fashion
-The dataset cited in the original paper is [DeepFashion: In-shop Clothes Retrieval](http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html). Only the images are needed for this repository. Once downloaded, move the image files under `data/deep_fashion/texture`.
+The dataset cited in the original paper is [DeepFashion: In-shop Clothes Retrieval](http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html). If you plan to preprocess the images yourself, download the images zip and move the image files under `data/deep_fashion/texture`.
+
+Alternatively, I've preprocessed the Deep Fashion image dataset already. The full preprocessed dataset can be downloaded here: https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj. If you want to use your own dataset, please follow the preprocessing instructions below while substituting "deep_fashion" for the name of your dataset.
 
 ## (Optional) Create Your Own Dataset
 If you'd like to take your own pictures, move the data into `data/YOUR_DATASET/texture`.
 
 # Preprocessing
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
-
-I've preprocessed the Deep Fashion image dataset already. This can be downloaded here: https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj. If you want to use your own dataset, please follow the instructions below while substituting "deep_fashion" for the name of your dataset.
 
 ## Body Preprocessing
 The original paper cited [Unite the People](https://github.com/classner/up) (UP) to obtain body segmentations; however, I ran into trouble installing Caffe to make UP work (probably due to its age). 
