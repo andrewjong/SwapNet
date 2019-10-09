@@ -9,7 +9,7 @@
 For more than a year, I've put all my efforts into reproducing [SwapNet (Raj et al. 2018)](http://www.eye.gatech.edu/swapnet/paper.pdf). Since an official codebase has not been released, by making my implementation public, I hope to contribute to transparency and openness in the Deep Learning community.
 
 # Installation
-This repository is built with PyTorch. I recommend installing dependencies via conda.
+This repository is built with PyTorch. I recommend installing dependencies via [conda](https://docs.conda.io/en/latest/).
 
 Run `conda env create` from the project directory to create the `swapnet` conda environment from the provided environment.yml.
 
@@ -118,14 +118,14 @@ Where SOURCE contains the clothing you want to transfer, and TARGET contains the
 
 ### Differences
 - Warp Stage
-  - Body segmentation: Neural Body Fitting instead of Unite the People
+  - Body segmentation: Neural Body Fitting instead of Unite the People (note NBF doesn't work well on cropped bodies)
   - I store cloth segmentations as a flat 2D map of numeric labels, then expand this into 1-hot encoded tensors at runtime. In the original SwapNet, they used probability maps, but this took up too much storage space (tens of dozens of GB) on my computer.
-  - Option to train on video data. For video data, the different frames provide additional "augmentation" for input cloth in the warp stage.
+  - Option to train on video data. For video data, the different frames provide additional "augmentation" for input cloth in the warp stage. Use `--data_mode video` to enable this.
 - Texture Stage
-  - cloth segmentation network: LIP_JPPNet instead of LIP_SSL
-  - Currently VGG feature loss prevents convergence, need to debug this
+  - Cloth segmentation: LIP_JPPNet instead of LIP_SSL
+  - Currently VGG feature loss prevents convergence, need to debug!
 - Overall
-  - Hyperparameters most likely. The hyperparameters were not listed in the original paper, so I had to experiment with these values.
+  - Hyperparameters most likely; the hyperparameters were not listed in the original paper, so I had to experiment with these values.
   - Implemented random label smoothing for better GAN stability
 
 ### TODO:
