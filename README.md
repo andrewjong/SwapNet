@@ -23,8 +23,6 @@ The following must then be added from preprocessing(see the Preprocessing sectio
 - `rois.csv` which contains the regions of interest for texture pooling
 - `norm_stats.json` which contain mean and standard deviation statistics for normalization
 
-The images under 
-
 ## Deep Fashion
 The dataset cited in the original paper is [DeepFashion: In-shop Clothes Retrieval](http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html). If you plan to preprocess the images yourself, download the images zip and move the image files under `data/deep_fashion/texture`.
 
