@@ -9,9 +9,32 @@
 For more than a year, I've put all my efforts into reproducing [SwapNet (Raj et al. 2018)](http://www.eye.gatech.edu/swapnet/paper.pdf). Since an official codebase has not been released, by making my implementation public, I hope to contribute to transparency and openness in the Deep Learning community.
 
 # Installation
+I have only tested this build with Linux! If anyone wants to contribute instructions for Windows/MacOS, be my guest :)
+
 This repository is built with PyTorch. I recommend installing dependencies via [conda](https://docs.conda.io/en/latest/).
 
 Run `conda env create` from the project directory to create the `swapnet` conda environment from the provided environment.yml.
+
+## Install ROI library (required)
+I borrow the ROI (region of interest) library from [jwyang](https://github.com/jwyang/faster-rcnn.pytorch/tree/pytorch-1.0). This must be installed for this project to run. Essentially we must 1) compile the library, and 2) create a symlink so our project can find the compiled files.
+
+**1) Build the ROI library**
+```
+git clone https://github.com/jwyang/faster-rcnn.pytorch.git # clone to a SEPARATE project directory
+cd faster-rcnn.pytorch
+git checkout pytorch-1.0
+pip install -r requirements.txt
+cd lib/pycocotools
+```
+Important: now COMPLETE THE INSTRUCTIONS [HERE](https://github.com/jwyang/faster-rcnn.pytorch/issues/402#issuecomment-448485129)!!
+```
+cd ..  # go back to the lib folder
+python setup.py build develop
+```
+**2) Make a symlink back to this repository.**
+```
+ln -s /path/to/faster-rcnn.pytorch/lib /path/to/swapnet-repo/lib
+```
 
 # Dataset
 Data in this repository must start with the following:
