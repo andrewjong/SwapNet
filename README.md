@@ -13,13 +13,20 @@ I have only tested this build with Linux! If anyone wants to contribute instruct
 
 This repository is built with PyTorch. I recommend installing dependencies via [conda](https://docs.conda.io/en/latest/).
 
-Run `conda env create` from the project directory to create the `swapnet` conda environment from the provided environment.yml.
+With conda installed run:
+```
+cd SwapNet/
+conda env create  # creates the conda environment from provided environment.yml
+conda activate swapnet
+```
+Make sure this environment stays activated while you install the ROI library below!
 
 ## Install ROI library (required)
 I borrow the ROI (region of interest) library from [jwyang](https://github.com/jwyang/faster-rcnn.pytorch/tree/pytorch-1.0). This must be installed for this project to run. Essentially we must 1) compile the library, and 2) create a symlink so our project can find the compiled files.
 
 **1) Build the ROI library**
 ```
+cd ..  # move out of the SwapNet project
 git clone https://github.com/jwyang/faster-rcnn.pytorch.git # clone to a SEPARATE project directory
 cd faster-rcnn.pytorch
 git checkout pytorch-1.0
@@ -35,6 +42,7 @@ python setup.py build develop
 ```
 ln -s /path/to/faster-rcnn.pytorch/lib /path/to/swapnet-repo/lib
 ```
+Note: symlinks on Linux tend to work best when you provide the full path.
 
 # Dataset
 Data in this repository must start with the following:
@@ -51,13 +59,15 @@ The dataset cited in the original paper is [DeepFashion: In-shop Clothes Retriev
 
 Alternatively, I've preprocessed the Deep Fashion image dataset already. The full preprocessed dataset can be downloaded here: https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj. If you want to use your own dataset, please follow the preprocessing instructions below while substituting "deep_fashion" for the name of your dataset.
 
-## (Optional) Create Your Own Dataset
+Otherwise, jump ahead to the Training section.
+
+# (Optional) Create Your Own Dataset
 If you'd like to take your own pictures, move the data into `data/YOUR_DATASET/texture`.
 
-# Preprocessing
+## Preprocessing
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
 
-## Body Preprocessing
+### Body Preprocessing
 The original paper cited [Unite the People](https://github.com/classner/up) (UP) to obtain body segmentations; however, I ran into trouble installing Caffe to make UP work (probably due to its age). 
 Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942) (NBF). [My fork of NBF](https://github.com/andrewjong/neural_body_fitting-for-SwapNet) modifies the code to output body segmentations and ROIs in the format that SwapNet requires. 
 
@@ -67,14 +77,14 @@ Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942)
 
 *Caveats:* neural body fitting appears to not do well on images that do not show the full body. In addition, the provided model seems it was only trained on one body type. I'm open to finding better alternatives.
 
-## Cloth Preprocessing
+### Cloth Preprocessing
 The original paper used [LIP\_SSL](https://github.com/Engineering-Course/LIP_SSL). I instead use the implementation from the follow-up paper, [LIP\_JPPNet](https://arxiv.org/pdf/1804.01984.pdf). Again, [my fork of LIP\_JPPNet](https://github.com/andrewjong/LIP_JPPNet-for-SwapNet) outputs cloth segmentations in the format required for SwapNet.
 
 1) Follow the installation instructions in the repository. Then follow the instructions under the "For SwapNet" section.
 
 2) Move the output under `data/deep_fashion/cloth/`
 
-## Calculate Normalization Statistics
+### Calculate Normalization Statistics
 This calculates normalization statistics for the preprocessed body image segmentations, under `body/`, and original images, under `texture/`. The cloth segmentations do not need to be processed because they're read as 1-hot encoded labels.
 
 Run the following: `python util/calculate_imagedir_stats.py data/deep_fashion/body/ data/deep_fashion/texture/`. The output should show up in `data/deep_fashion/norm_stats.json`.
