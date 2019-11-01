@@ -61,13 +61,13 @@ Alternatively, I've preprocessed the Deep Fashion image dataset already. The ful
 
 Otherwise, jump ahead to the Training section.
 
-# (Optional) Create Your Own Dataset
+## (Optional) Create Your Own Dataset
 If you'd like to take your own pictures, move the data into `data/YOUR_DATASET/texture`.
 
-## Preprocessing
+### Preprocessing
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
 
-### Body Preprocessing
+#### Body Preprocessing
 The original paper cited [Unite the People](https://github.com/classner/up) (UP) to obtain body segmentations; however, I ran into trouble installing Caffe to make UP work (probably due to its age). 
 Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942) (NBF). [My fork of NBF](https://github.com/andrewjong/neural_body_fitting-for-SwapNet) modifies the code to output body segmentations and ROIs in the format that SwapNet requires. 
 
@@ -77,14 +77,14 @@ Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942)
 
 *Caveats:* neural body fitting appears to not do well on images that do not show the full body. In addition, the provided model seems it was only trained on one body type. I'm open to finding better alternatives.
 
-### Cloth Preprocessing
+#### Cloth Preprocessing
 The original paper used [LIP\_SSL](https://github.com/Engineering-Course/LIP_SSL). I instead use the implementation from the follow-up paper, [LIP\_JPPNet](https://arxiv.org/pdf/1804.01984.pdf). Again, [my fork of LIP\_JPPNet](https://github.com/andrewjong/LIP_JPPNet-for-SwapNet) outputs cloth segmentations in the format required for SwapNet.
 
 1) Follow the installation instructions in the repository. Then follow the instructions under the "For SwapNet" section.
 
 2) Move the output under `data/deep_fashion/cloth/`
 
-### Calculate Normalization Statistics
+#### Calculate Normalization Statistics
 This calculates normalization statistics for the preprocessed body image segmentations, under `body/`, and original images, under `texture/`. The cloth segmentations do not need to be processed because they're read as 1-hot encoded labels.
 
 Run the following: `python util/calculate_imagedir_stats.py data/deep_fashion/body/ data/deep_fashion/texture/`. The output should show up in `data/deep_fashion/norm_stats.json`.
