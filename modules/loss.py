@@ -274,10 +274,12 @@ class MultiLayerFeatureLoss(FeatureLoss):
         """
         # e.g. VGG
         super().__init__(feature_extractor, scale)
-        num_layers = 7
+       
         if select_loss_model==0:
+            num_layers = 7
             loss_layers = [5,10,17,26,35,39,42]     # M2E loss layers
         else:
+            num_layers = 4
             loss_layers = [5,10,17,26]
         features = list(feature_extractor.features)
         self.num_layers = num_layers
@@ -291,7 +293,7 @@ class MultiLayerFeatureLoss(FeatureLoss):
         
         #start = len(self.features) - num_layers
         #end = len(self.features)
-                self.layers_to_keep = {i for i in loss_layers}
+        self.layers_to_keep = {i for i in loss_layers}
 
     def extract_intermediate_layers(self, x):
         """
