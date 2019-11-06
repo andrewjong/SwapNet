@@ -240,21 +240,58 @@ class MultiLayerFeatureLoss(FeatureLoss):
         :param loss_fn: an initialized loss function
         :param num_layers: number of layers from the end to keep. e.g. 3 will compute
         the loss using the last 3 layers of the feature extractor network
+        
+        -------------------------------------------------------
+        Information on layers considered for loss calculations:
+        -------------------------------------------------------
+        1. M2E Net Section 3.5..
+        
+        We extract 7 different features Φi from relu1_2, relu2_2, relu3_3, relu4_3, relu5_3, fc6 and fc7. Then we use the l2 distance to penalize the differences.
+        --------------------------------
+        | Layers for computing the loss|
+        | relu1_2 : 5                  |
+        | relu2_2 : 10                 |
+        | relu3_3 : 17                 |
+        | relu4_3 : 26                 |
+        | relu5_3 : 35                 |
+        | fc6     : 39                 |
+        | fc7     : 42                 |
+        --------------------------------
+        
+        2. Perceptual Losses for Real-Time Style Transfer" section 4.1 Training Details:
+        
+        For all style transfer experiments we compute feature reconstruction loss at layer relu3_3 and style reconstruction loss at layers relu1_2, relu2_2, relu3_3, and relu4_3 of the VGG-16 loss network φ
+        
+        --------------------------------
+        | Layers for computing the loss|
+        | relu1_2 : 5                  |
+        | relu2_2 : 10                 |
+        | relu3_3 : 17                 |
+        | relu4_3 : 26                 |
+        --------------------------------
+        
+        
         """
         # e.g. VGG
         super().__init__(feature_extractor, scale)
-
+        num_layers = 7
+        if select_loss_model==0:
+            loss_layers = [5,10,17,26,35,39,42]     # M2E loss layers
+        else:
+            loss_layers = [5,10,17,26]
         features = list(feature_extractor.features)
         self.num_layers = num_layers
         self.loss_fn = loss_fn
-
+        
+        # not fully understood what next line does.
         self.layer_weights = [i + 1 / num_layers for i in range(num_layers)]
-
+        
+        
         self.features = nn.ModuleList(features).eval()
-
-        start = len(self.features) - num_layers
-        end = len(self.features)
-        self.layers_to_keep = {i for i in range(start, end)}
+        
+        #start = len(self.features) - num_layers
+        #end = len(self.features)
+                self.layers_to_keep = {i for i in loss_layers}
 
     def extract_intermediate_layers(self, x):
         """
