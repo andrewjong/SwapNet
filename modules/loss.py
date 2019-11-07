@@ -234,7 +234,7 @@ class MultiLayerFeatureLoss(FeatureLoss):
     Computes the feature loss with the last n layers of a deep feature extractor.
     """
 
-    def __init__(self, feature_extractor, scale, loss_fn=nn.L1Loss(), num_layers=3):
+    def __init__(self, feature_extractor, scale, loss_fn=nn.L1Loss(), feature_loss_type='M2E'):
         """
         :param feature_extractor: an pretrained model, i.e. resnet18(), vgg19()
         :param loss_fn: an initialized loss function
@@ -263,30 +263,33 @@ class MultiLayerFeatureLoss(FeatureLoss):
         For all style transfer experiments we compute feature reconstruction loss at layer relu3_3 and style reconstruction loss at layers relu1_2, relu2_2, relu3_3, and relu4_3 of the VGG-16 loss network φ
         
         --------------------------------
-        | Layers for computing the loss|
-        | relu1_2 : 5                  |
-        | relu2_2 : 10                 |
-        | relu3_3 : 17                 |
-        | relu4_3 : 26                 |
+        | Layers for computing the loss
+        |           Vgg19      Vgg16
+        | relu1_2 : 5          5       |
+        | relu2_2 : 10         10      |
+        | relu3_3 : 17         17      |
+        | relu4_3 : 26         24      |
         --------------------------------
         
         
         """
         # e.g. VGG
         super().__init__(feature_extractor, scale)
-       
-        if select_loss_model==0:
-            num_layers = 7
+        if opt.feature_loss_type == 'RTT':
+            self.criterion_features = models.vgg16(pretrained=True)# get the RTT version
+            loss_layers = [5,10,17,24]
+        
+        elif opt.feature_loss_type == 'M2E':
+            self.criterion_features = feature_extractor # get the M2E version
             loss_layers = [5,10,17,26,35,39,42]     # M2E loss layers
         else:
-            num_layers = 4
-            loss_layers = [5,10,17,26]
+            raise ValueError(f"{opt.feature_loss_type} not recognized")
+
         features = list(feature_extractor.features)
         self.num_layers = num_layers
         self.loss_fn = loss_fn
         
-        # not fully understood what next line does.
-        self.layer_weights = [i + 1 / num_layers for i in range(num_layers)]
+        #self.layer_weights = [i + 1 / num_layers for i in range(num_layers)]
         
         
         self.features = nn.ModuleList(features).eval()

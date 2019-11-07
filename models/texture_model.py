@@ -36,6 +36,13 @@ class TextureModel(BaseGAN):
                 default=0,
                 help="weight for feature loss in final term",
             )
+            parser.add_argument(
+                "--feature_loss_type",
+                type=str,
+                choices=['RTT','M2E'],
+                default='M2E'
+                help="feature loss layer selection based on papers : M2E or RTT",
+            )
             # based on the num entries in self.visual_names during training
             parser.set_defaults(display_ncols=5)
         return parser
