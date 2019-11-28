@@ -164,6 +164,8 @@ Where SOURCE contains the clothing you want to transfer, and TARGET contains the
 - [ ] Match texture quality produced in original paper (likely due to Feature Loss)
 - [ ] Test DRAGAN penalty and other advanced GAN losses
 
+# What's Next?
+I plan to keep improving virtual try-on in my own research project, and aim to release something by March or April 2020. (I've already made some progress which is scheduled to be published in the upcoming HPCS 2019 proceedings, but I aim to contribute more.) Stay tuned.
 
 # Credits
 - The layout of this repository is strongly influenced by Jun-Yan Zhu's [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) repository, though I've implemented significant changes. Many thanks to their team for open sourcing their code.
