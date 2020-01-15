@@ -116,6 +116,9 @@ output, and target texture (right most).
 </p>
 
 # Inference
+To download pretrained models, download the `checkpoints/` folder from [here](https://drive.google.com/open?id=1kaeHlGf9h3vZLBxr4D5yQUgToxEUWuMh) and extract it under the project root. Please note that these models are currently far from perfect. I have yet to properly implement the perceptual loss that is critical for texture transfer (see [Issue #7](https://github.com/andrewjong/SwapNet/issues/7)).
+
+
 Inference will run the warp stage and texture stage in series.
 
 To run inference on deep fashion, run this command:
