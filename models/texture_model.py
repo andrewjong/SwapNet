@@ -1,16 +1,14 @@
 from argparse import ArgumentParser
-from PIL import Image, ImageDraw
-from util.draw_rois import draw_rois_on_texture
 
 import torch
 from torch import nn
 
-import modules.loss
+import modules.losses
 from datasets.data_utils import unnormalize, scale_tensor
 from models.base_gan import BaseGAN
 from modules.swapnet_modules import TextureModule
 from util.decode_labels import decode_cloth_labels
-from util.util import tensor2im
+from util.draw_rois import draw_rois_on_texture
 
 
 class TextureModel(BaseGAN):
@@ -31,10 +29,16 @@ class TextureModel(BaseGAN):
                 help="weight for L1 loss in final term",
             )
             parser.add_argument(
-                "--lambda_feat",
+                "--lambda_content",
                 type=float,
-                default=0,
-                help="weight for feature loss in final term",
+                default=5,
+                help="weight for content loss in final term",
+            )
+            parser.add_argument(
+                "--lambda_style",
+                type=float,
+                default=0.01,
+                help="weight for content loss in final term",
             )
             # based on the num entries in self.visual_names during training
             parser.set_defaults(display_ncols=5)
@@ -53,12 +57,13 @@ class TextureModel(BaseGAN):
         if self.is_train:
             self.visual_names.append("targets_unnormalized")
             # Define additional loss for generator
-            self.criterion_L1 = nn.L1Loss()
-            self.criterion_features = modules.loss.get_vgg_feature_loss(opt, 1).to(
-                self.device
-            )
+            self.criterion_L1 = nn.L1Loss().to(self.device)
+            self.criterion_perceptual = modules.losses.PerceptualLoss(
+                use_style=opt.lambda_style != 0).to(self.device)
 
-            self.loss_names = self.loss_names + ["G_l1", "G_feature"]
+            for loss in ["l1", "content", "style"]:
+                if getattr(opt, "lambda_" + loss) != 0:
+                    self.loss_names.append(f"G_{loss}")
 
     def compute_visuals(self):
         self.textures_unnormalized = unnormalize(
@@ -144,12 +149,14 @@ class TextureModel(BaseGAN):
         self.loss_G_gan = self.criterion_GAN(pred_fake, True) * self.opt.lambda_gan
 
         self.loss_G_l1 = (
-            self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
+                self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
         )
-        self.loss_G_feature = (
-            self.criterion_features(self.fakes, self.targets) * self.opt.lambda_feat
-        )
+        if self.opt.lambda_content != 0 or self.opt.lambda_style != 0:
+            self.loss_G_content, self.loss_G_style = self.criterion_perceptual(
+                self.fakes, self.targets)
+            self.loss_G_content *= self.opt.lambda_content
+            self.loss_G_style *= self.opt.lambda_style
 
         # weighted sum
-        self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_feature
+        self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_content + self.loss_G_style
         self.loss_G.backward()
