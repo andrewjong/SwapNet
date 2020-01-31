@@ -6,6 +6,8 @@ from torch import nn
 import modules.losses
 from datasets.data_utils import unnormalize, scale_tensor
 from models.base_gan import BaseGAN
+from modules import get_norm_layer
+from modules.pix2pix_modules import UnetGenerator
 from modules.swapnet_modules import TextureModule
 from util.decode_labels import decode_cloth_labels
 from util.draw_rois import draw_rois_on_texture
@@ -23,6 +25,11 @@ class TextureModel(BaseGAN):
         )
         if is_train:
             parser.add_argument(
+                "--netG",
+                default="swapnet",
+                choices=["swapnet", "unet_128"]
+            )
+            parser.add_argument(
                 "--lambda_l1",
                 type=float,
                 default=10,
@@ -31,13 +38,13 @@ class TextureModel(BaseGAN):
             parser.add_argument(
                 "--lambda_content",
                 type=float,
-                default=5,
+                default=20,
                 help="weight for content loss in final term",
             )
             parser.add_argument(
                 "--lambda_style",
                 type=float,
-                default=0.01,
+                default=1e-8,  # experimentally set to be within the same magnitude as l1 and content
                 help="weight for content loss in final term",
             )
             # based on the num entries in self.visual_names during training
@@ -87,25 +94,38 @@ class TextureModel(BaseGAN):
         return self.opt.texture_channels + self.opt.cloth_channels
 
     def define_G(self):
-        return TextureModule(
-            texture_channels=self.opt.texture_channels,
-            cloth_channels=self.opt.cloth_channels,
-            num_roi=self.opt.body_channels,
-            img_size=self.opt.crop_size,
-            norm_type=self.opt.norm,
-        )
+        if self.opt.netG == "unet_128":
+            norm_layer = get_norm_layer("batch")
+            return UnetGenerator(
+                self.opt.texture_channels, self.opt.texture_channels, 7, 64, norm_layer=norm_layer, use_dropout=True
+            )
+        elif self.opt.netG == "swapnet":
+            return TextureModule(
+                texture_channels=self.opt.texture_channels,
+                cloth_channels=self.opt.cloth_channels,
+                num_roi=self.opt.body_channels,
+                img_size=self.opt.crop_size,
+                norm_type=self.opt.norm,
+            )
+        else:
+            raise ValueError("Cannot find implementation for " + self.opt.netG)
 
     def set_input(self, input):
         self.textures = input["input_textures"].to(self.device)
         # self.textures = torch.zeros_like(self.textures) # DEBUG DEBUG: see if GAN works without messed up texture input
         self.rois = input["rois"].to(self.device)
+        self.rois = torch.zeros_like(self.rois)
         self.cloths = input["cloths"].to(self.device)
+        self.cloths = torch.zeros_like(self.cloths)
         self.targets = input["target_textures"].to(self.device)
 
         self.image_paths = tuple(zip(input["cloth_paths"], input["texture_paths"]))
 
     def forward(self):
-        self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
+        if self.opt.netG == "swapnet":
+            self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
+        elif self.opt.netG.startswith("unet_"):
+            self.fakes = self.net_generator(self.textures)
 
     def backward_D(self):
         """
@@ -151,6 +171,7 @@ class TextureModel(BaseGAN):
         self.loss_G_l1 = (
                 self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
         )
+        self.loss_G_content = self.loss_G_style = 0
         if self.opt.lambda_content != 0 or self.opt.lambda_style != 0:
             self.loss_G_content, self.loss_G_style = self.criterion_perceptual(
                 self.fakes, self.targets)

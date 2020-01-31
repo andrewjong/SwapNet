@@ -45,6 +45,12 @@ class BaseGAN(BaseModel, ABC):
                 help="weight for adversarial loss",
             )
             parser.add_argument(
+                "--lambda_discriminator",
+                type=float,
+                default=1.0,
+                help="weight for discriminator loss",
+            )
+            parser.add_argument(
                 "--lambda_gp",
                 help="weight parameter for gradient penalty",
                 type=float,
@@ -108,7 +114,7 @@ class BaseGAN(BaseModel, ABC):
                 "--d_wt_decay",
                 "--d_weight_decay",
                 dest="d_weight_decay",
-                default=0,
+                default=0.01,
                 type=float,
                 help="optimizer L2 weight decay",
             )
@@ -151,10 +157,14 @@ class BaseGAN(BaseModel, ABC):
             self.criterion_GAN = modules.loss.GANLoss(
                 opt.gan_mode, smooth_labels=use_smooth
             ).to(self.device)
-            self.loss_names = ["D", "D_real", "D_fake"]
-            if any(gp_mode in opt.gan_mode for gp_mode in ["gp", "lp"]):
-                self.loss_names += ["D_gp"]
-            self.loss_names += ["G", "G_gan"]
+
+            if opt.lambda_discriminator:
+                self.loss_names = ["D", "D_real", "D_fake"]
+                if any(gp_mode in opt.gan_mode for gp_mode in ["gp", "lp"]):
+                    self.loss_names += ["D_gp"]
+            self.loss_names += ["G"]
+            if opt.lambda_gan:
+                self.loss_names += ["G_gan"]
 
             # Define optimizers
             self.optimizer_G = optimizers.define_optimizer(
@@ -209,7 +219,7 @@ class BaseGAN(BaseModel, ABC):
         pred_real = self.net_discriminator(self.targets)
         self.loss_D_real = self.criterion_GAN(pred_real, True)
 
-        self.loss_D = 0.5 * (self.loss_D_fake + self.loss_D_real)
+        self.loss_D = 0.5 * (self.loss_D_fake + self.loss_D_real) * self.opt.lambda_discriminator
 
         if any(gp_mode in self.opt.gan_mode for gp_mode in ["gp", "lp"]):
             # calculate gradient penalty
