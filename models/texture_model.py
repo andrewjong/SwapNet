@@ -112,11 +112,8 @@ class TextureModel(BaseGAN):
 
     def set_input(self, input):
         self.textures = input["input_textures"].to(self.device)
-        # self.textures = torch.zeros_like(self.textures) # DEBUG DEBUG: see if GAN works without messed up texture input
         self.rois = input["rois"].to(self.device)
-        self.rois = torch.zeros_like(self.rois)
         self.cloths = input["cloths"].to(self.device)
-        self.cloths = torch.zeros_like(self.cloths)
         self.targets = input["target_textures"].to(self.device)
 
         self.image_paths = tuple(zip(input["cloth_paths"], input["texture_paths"]))
