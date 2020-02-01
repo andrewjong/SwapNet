@@ -20,7 +20,7 @@ def tensor2im(input_image, imtype=np.uint8):
         else:
             return input_image
         # select the first and convert it into a numpy array
-        image_numpy: np.ndarray = image_tensor[0].cpu().float().numpy()
+        image_numpy: np.ndarray = image_tensor[0].cpu().numpy()
         if image_numpy.shape[0] == 1:  # grayscale to RGB
             image_numpy = np.tile(image_numpy, (3, 1, 1))
         # post-processing: tranpose and scaling
