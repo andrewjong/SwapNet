@@ -1,16 +1,16 @@
 from argparse import ArgumentParser
-from PIL import Image, ImageDraw
-from util.draw_rois import draw_rois_on_texture
 
 import torch
 from torch import nn
 
-import modules.loss
+import modules.losses
 from datasets.data_utils import unnormalize, scale_tensor
 from models.base_gan import BaseGAN
+from modules import get_norm_layer
+from modules.pix2pix_modules import UnetGenerator
 from modules.swapnet_modules import TextureModule
 from util.decode_labels import decode_cloth_labels
-from util.util import tensor2im
+from util.draw_rois import draw_rois_on_texture
 
 
 class TextureModel(BaseGAN):
@@ -25,16 +25,27 @@ class TextureModel(BaseGAN):
         )
         if is_train:
             parser.add_argument(
+                "--netG",
+                default="swapnet",
+                choices=["swapnet", "unet_128"]
+            )
+            parser.add_argument(
                 "--lambda_l1",
                 type=float,
                 default=10,
                 help="weight for L1 loss in final term",
             )
             parser.add_argument(
-                "--lambda_feat",
+                "--lambda_content",
                 type=float,
-                default=0,
-                help="weight for feature loss in final term",
+                default=20,
+                help="weight for content loss in final term",
+            )
+            parser.add_argument(
+                "--lambda_style",
+                type=float,
+                default=1e-8,  # experimentally set to be within the same magnitude as l1 and content
+                help="weight for content loss in final term",
             )
             # based on the num entries in self.visual_names during training
             parser.set_defaults(display_ncols=5)
@@ -53,12 +64,13 @@ class TextureModel(BaseGAN):
         if self.is_train:
             self.visual_names.append("targets_unnormalized")
             # Define additional loss for generator
-            self.criterion_L1 = nn.L1Loss()
-            self.criterion_features = modules.loss.get_vgg_feature_loss(opt, 1).to(
-                self.device
-            )
+            self.criterion_L1 = nn.L1Loss().to(self.device)
+            self.criterion_perceptual = modules.losses.PerceptualLoss(
+                use_style=opt.lambda_style != 0).to(self.device)
 
-            self.loss_names = self.loss_names + ["G_l1", "G_feature"]
+            for loss in ["l1", "content", "style"]:
+                if getattr(opt, "lambda_" + loss) != 0:
+                    self.loss_names.append(f"G_{loss}")
 
     def compute_visuals(self):
         self.textures_unnormalized = unnormalize(
@@ -82,17 +94,24 @@ class TextureModel(BaseGAN):
         return self.opt.texture_channels + self.opt.cloth_channels
 
     def define_G(self):
-        return TextureModule(
-            texture_channels=self.opt.texture_channels,
-            cloth_channels=self.opt.cloth_channels,
-            num_roi=self.opt.body_channels,
-            img_size=self.opt.crop_size,
-            norm_type=self.opt.norm,
-        )
+        if self.opt.netG == "unet_128":
+            norm_layer = get_norm_layer("batch")
+            return UnetGenerator(
+                self.opt.texture_channels, self.opt.texture_channels, 7, 64, norm_layer=norm_layer, use_dropout=True
+            )
+        elif self.opt.netG == "swapnet":
+            return TextureModule(
+                texture_channels=self.opt.texture_channels,
+                cloth_channels=self.opt.cloth_channels,
+                num_roi=self.opt.body_channels,
+                img_size=self.opt.crop_size,
+                norm_type=self.opt.norm,
+            )
+        else:
+            raise ValueError("Cannot find implementation for " + self.opt.netG)
 
     def set_input(self, input):
         self.textures = input["input_textures"].to(self.device)
-        # self.textures = torch.zeros_like(self.textures) # DEBUG DEBUG: see if GAN works without messed up texture input
         self.rois = input["rois"].to(self.device)
         self.cloths = input["cloths"].to(self.device)
         self.targets = input["target_textures"].to(self.device)
@@ -100,7 +119,10 @@ class TextureModel(BaseGAN):
         self.image_paths = tuple(zip(input["cloth_paths"], input["texture_paths"]))
 
     def forward(self):
-        self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
+        if self.opt.netG == "swapnet":
+            self.fakes = self.net_generator(self.textures, self.rois, self.cloths)
+        elif self.opt.netG.startswith("unet_"):
+            self.fakes = self.net_generator(self.textures)
 
     def backward_D(self):
         """
@@ -144,12 +166,15 @@ class TextureModel(BaseGAN):
         self.loss_G_gan = self.criterion_GAN(pred_fake, True) * self.opt.lambda_gan
 
         self.loss_G_l1 = (
-            self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
+                self.criterion_L1(self.fakes, self.targets) * self.opt.lambda_l1
         )
-        self.loss_G_feature = (
-            self.criterion_features(self.fakes, self.targets) * self.opt.lambda_feat
-        )
+        self.loss_G_content = self.loss_G_style = 0
+        if self.opt.lambda_content != 0 or self.opt.lambda_style != 0:
+            self.loss_G_content, self.loss_G_style = self.criterion_perceptual(
+                self.fakes, self.targets)
+            self.loss_G_content *= self.opt.lambda_content
+            self.loss_G_style *= self.opt.lambda_style
 
         # weighted sum
-        self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_feature
+        self.loss_G = self.loss_G_gan + self.loss_G_l1 + self.loss_G_content + self.loss_G_style
         self.loss_G.backward()
