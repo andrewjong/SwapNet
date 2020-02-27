@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 from typing import Callable
 
@@ -7,6 +8,7 @@ from tqdm import tqdm
 from datasets import create_dataset
 from datasets.data_utils import compress_and_save_cloth, remove_extension
 from models import create_model
+from options.base_options import load
 from options.test_options import TestOptions
 from util import html
 from util.util import PromptOnce
@@ -14,6 +16,7 @@ from util.visualizer import save_images
 
 WARP_SUBDIR = "warp"
 TEXTURE_SUBDIR = "texture"
+
 
 # FUNCTIONS SHOULD NOT BE IMPORTED BY OTHER MODULES. THEY ARE ONLY HELPER METHODS,
 # AND DEPEND ON GLOBAL VARIABLES UNDER MAIN
@@ -55,7 +58,8 @@ def _rebuild_from_checkpoint(checkpoint_file, same_crop_load_size=False, **ds_kw
 
     """
     checkpoint_dir = os.path.dirname(checkpoint_file)
-    loaded_opt = _copy_and_load_config(checkpoint_dir).opt
+    # read the config file  so we can load in the model
+    loaded_opt = load(copy.deepcopy(opt), os.path.join(checkpoint_dir, "args.json"))
     # force certain attributes in the loaded cfg
     override_namespace(
         loaded_opt,
@@ -73,20 +77,6 @@ def _rebuild_from_checkpoint(checkpoint_file, same_crop_load_size=False, **ds_kw
     dataset = create_dataset(loaded_opt, **ds_kwargs)
 
     return model, dataset
-
-
-def _copy_and_load_config(directory):
-    """
-    Copies the global config and loads in train arguments from "args.json".
-
-    This is so we can reconstruct the model/dataset.
-    Args:
-        directory: directory to load "args.json" from
-
-    Returns:
-
-    """
-    return config.copy().load(os.path.join(directory, "args.json"))
 
 
 def override_namespace(namespace, **kwargs):
