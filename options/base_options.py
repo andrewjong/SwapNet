@@ -63,7 +63,7 @@ class BaseOptions:
             "--dataroot",
             required=True,
             help="path to data, should contain 'cloth/', 'body/', 'texture/', "
-            "'rois.csv'",
+                 "'rois.csv'",
         )
         parser.add_argument(
             "--dataset", help="dataset class to use, if none then will use model name"
@@ -94,14 +94,14 @@ class BaseOptions:
             default=19,
             type=int,
             help="only used if --cloth_representation == 'labels'. cloth segmentation "
-            "number of channels",
+                 "number of channels",
         )
         parser.add_argument(
             "--body_channels",
             default=12,
             type=int,
             help="only used if --body_representation == 'labels'. body segmentation "
-            "number of channels. Use 12 for neural body fitting output",
+                 "number of channels. Use 12 for neural body fitting output",
         )
         parser.add_argument(
             "--texture_channels",
@@ -196,7 +196,7 @@ class BaseOptions:
         :return:
         """
         assert (
-            opt.crop_size <= opt.load_size
+                opt.crop_size <= opt.load_size
         ), "Crop size must be less than or equal to load size "
 
     def parse(self, print_options=True, store_options=True, user_overrides=True):
@@ -256,39 +256,36 @@ class BaseOptions:
         with open(self.save_file, "w") as f:
             f.write(json.dumps(d, indent=4))
 
-    def copy(self):
-        """
-        Returns: a deep copy of self
+    def load(self, json_file, user_overrides):
+        load(self.opt, json_file, user_overrides=user_overrides)
 
-        """
-        return copy.deepcopy(self)
 
-    def load(self, json_file, user_overrides=True):
-        """
+def load(opt, json_file, user_overrides=True):
+    """
 
-        Args:
-            json_file:
-            user_overrides: whether user command line arguments should override anything being loaded from the config file
+    Args:
+        opt: Namespace that will get modified
+        json_file:
+        user_overrides: whether user command line arguments should override anything being loaded from the config file
 
-        Returns:
+    """
+    opt = copy.deepcopy(opt)
+    with open(json_file, "r") as f:
+        args = json.load(f)
 
-        """
-        with open(json_file, "r") as f:
-            args = json.load(f)
+    # if the user specifies arguments on the command line, don't override these
+    if user_overrides:
+        user_args = filter(lambda a: a.startswith("--"), sys.argv[1:])
+        user_args = set(
+            [a.lstrip("-") for a in user_args]
+        )  # get rid of left dashes
+        print("Not overriding:", user_args)
 
-        # if the user specifies arguments on the command line, don't override these
-        if user_overrides:
-            user_args = filter(lambda a: a.startswith("--"), sys.argv[1:])
-            user_args = set(
-                [a.lstrip("-") for a in user_args]
-            )  # get rid of left dashes
-            print("Not overriding:", user_args)
-
-        # override default options with values in config file
-        for k, v in args.items():
-            # only override if not specified on the cmdline
-            if not user_overrides or (user_overrides and k not in user_args):
-                setattr(self.opt, k, v)
-        # but make sure the config file matches up
-        self.opt.config_file = json_file
-        return self
+    # override default options with values in config file
+    for k, v in args.items():
+        # only override if not specified on the cmdline
+        if not user_overrides or (user_overrides and k not in user_args):
+            setattr(opt, k, v)
+    # but make sure the config file matches up
+    opt.config_file = json_file
+    return opt
