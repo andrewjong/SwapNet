@@ -8,6 +8,9 @@
 
 For more than a year, I've put all my efforts into reproducing [SwapNet (Raj et al. 2018)](http://www.eye.gatech.edu/swapnet/paper.pdf). Since an official codebase has not been released, by making my implementation public, I hope to contribute to transparency and openness in the Deep Learning community.
 
+## Contributing
+I'd welcome help to improve the DevOps of this project. The current installation process is complicated and prone to version incompatibility, but unfortunately I have other life priorities right now. If you'd like to contribute, please look for the [help-wanted](https://github.com/andrewjong/SwapNet/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) label in the Issues. Please feel free to email me for questions as well.
+
 # Installation
 I have only tested this build with Linux! If anyone wants to contribute instructions for Windows/MacOS, be my guest :)
 
