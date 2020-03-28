@@ -1,4 +1,3 @@
-#FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-runtime
 FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 RUN apt-get update 
@@ -23,16 +22,6 @@ ENV PATH=/miniconda/bin:$PATH
 
 RUN cd SwapNet && conda env create 
 
-#ENV PATH=/miniconda/bin:$PATH
-#ENV CONDA_DEFAULT_ENV=swapnet
-#ENV CONDA_PREFIX=/miniconda/envs/$CONDA_DEFAULT_ENV
-#ENV PATH=$CONDA_PREFIX/bin:$PATH
-#ENV CONDA_AUTO_UPDATE_CONDA=false
-
-#RUN echo "source activate swapnet" > ~/.bashrc
-# Make RUN commands use the new environment:
-#SHELL ["conda", "run", "-n", "swapnet", "/bin/bash", "-c"]
-
 RUN git clone https://github.com/jwyang/faster-rcnn.pytorch.git # clone to a SEPARATE project directory
 
 RUN  /bin/bash -c "source activate swapnet && cd faster-rcnn.pytorch && git checkout pytorch-1.0 && pip install -r requirements.txt"
@@ -47,14 +36,13 @@ RUN  /bin/bash -c "source activate swapnet && ln -s /app/faster-rcnn.pytorch/lib
 
 RUN  /bin/bash -c "source activate swapnet && conda install seaborn"
 
+# checking environment
+# this command should display gpu properties
 RUN nvidia-smi
 
+# This should print true
 RUN /bin/bash -c "source activate swapnet && python -c 'import torch; print(torch.cuda.is_available())'"
 
+# CUDA Home should not be none
 RUN /bin/bash -c "source activate swapnet && python -c 'import torch;from torch.utils.cpp_extension import CUDA_HOME; print(CUDA_HOME)'"
-
-
-#COPY requirements.txt /app/
-#RUN pip3 install -r requirements.txt
-
 
