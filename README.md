@@ -40,7 +40,7 @@ space must be available on your hard drive. Pulling will take a while.
     ```
 4. Start a container that launches the Visdom server.
     ```bash
-    docker run -d --name swapnet -v ${PWD}:/app/SwapNet -p 8097:8097 \
+    docker run -d --name swapnet_env -v ${PWD}:/app/SwapNet -p 8097:8097 \
        --shm-size 8G --gpus all andrewjong/swapnet \
        bash -c "source activate swapnet && python -m visdom.server"
     ```
