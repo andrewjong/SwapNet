@@ -1,5 +1,5 @@
 # SwapNet
-**Unofficial PyTorch reproduction of SwapNet.**
+**Community PyTorch reproduction of SwapNet.**
 
 <p align="center">
 <img src="media/example.png" alt="SwapNet example" width=600>
