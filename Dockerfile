@@ -28,6 +28,16 @@ RUN cd SwapNet && \
 	&& conda env create \
 	&& echo "source activate swapnet" >> ~/.bashrc
 
+# Checking environment, required for ROI to build properly
+# this command should display gpu properties
+RUN /bin/bash -c "nvidia-smi || echo 'nvidia-smi failed. A GPU is necessary to properly compile the ROI dependency. Make sure you have the NVIDIA Container Toolkit installed and enabled-by-default by editing /etc/docker/daemon.json'"
+
+# This should print true
+RUN /bin/bash -c "source activate swapnet && python -c 'import torch; print(torch.cuda.is_available())'"
+
+# CUDA Home should not be none
+RUN /bin/bash -c "source activate swapnet && python -c 'import torch;from torch.utils.cpp_extension import CUDA_HOME; print(CUDA_HOME)'"
+
 # ROI Dependency
 RUN echo "Compiling ROI dependency..."
 
@@ -42,15 +52,5 @@ RUN  /bin/bash -c "source activate swapnet && cd faster-rcnn.pytorch/lib && pyth
 RUN  /bin/bash -c "source activate swapnet && ln -s /app/faster-rcnn.pytorch/lib /app/SwapNet/lib"
 
 RUN  /bin/bash -c "source activate swapnet && conda install seaborn"
-
-# checking environment
-# this command should display gpu properties
-RUN nvidia-smi
-
-# This should print true
-RUN /bin/bash -c "source activate swapnet && python -c 'import torch; print(torch.cuda.is_available())'"
-
-# CUDA Home should not be none
-RUN /bin/bash -c "source activate swapnet && python -c 'import torch;from torch.utils.cpp_extension import CUDA_HOME; print(CUDA_HOME)'"
 
 RUN echo "Done!"
