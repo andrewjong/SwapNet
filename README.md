@@ -12,19 +12,81 @@ For more than a year, I've put all my efforts into reproducing [SwapNet (Raj et 
 I'd welcome help to improve the DevOps of this project. The current installation process is complicated and prone to version incompatibility. Unfortunately I have other life priorities right now and don't have much time to resolve these particular issues. If you'd like to contribute, please look for the [help-wanted](https://github.com/andrewjong/SwapNet/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) label in the Issues. Please feel free to email me for questions as well.
 
 # Installation
+
+## Option 1: Install with Docker (Recommended)
+Many thanks to Urwa Muaz for getting this started.
+
+It's recommended to install and run this code using [Docker](https://docs.docker.com/install/) 
+(specifically community edition, Docker 19.03 or higher) and the provided Docker image.
+Docker enables sharing the same environment across different computers and operating 
+systems. This could save you a lot of setup headache; however, there is some developer
+overhead because you have to interact through Docker. If you prefer to build without 
+Docker, skip to Option 2: Manual Install. Otherwise, follow the instructions below.
+
+
+1. Clone this repo to your computer.
+    ```bash
+    git clone https://github.com/andrewjong/SwapNet.git
+    cd SwapNet
+   ```
+2. If you have a GPU, make sure you have the 
+[NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-docker#quickstart) 
+installed to connect your GPU with Docker. Follow their install instructions.
+
+3. Pull the image from Docker Hub. The image is 9.29GB, so at least this much
+space must be available on your hard drive. Pulling will take a while. 
+    ```bash
+    docker pull andrewjong/swapnet
+    ```
+4. Start a container that launches the Visdom server.
+    ```bash
+    docker run -d --name swapnet -v ${PWD}:/app/SwapNet -p 8097:8097 \
+       --shm-size 8G --gpus all andrewjong/swapnet \
+       bash -c "source activate swapnet && python -m visdom.server"
+    ```
+    Command explanation (just for reference, don't run this):
+    ```bash
+    docker                  # docker program
+    run                     # start a new container
+    -d                      # detach (leaves the process running)
+    --name swapnet_env      # name the launched container as "swapnet_env"
+    -v ${PWD}:/app/SwapNet  # mount our code (assumed from the current working directory) into Docker
+    -p 8097:8097            # link ports for Visdom
+    --shm-size 8G           # expand Docker shared memory size for PyTorch dataloaders
+    --gpus all              # let Docker use the GPUs 
+    andrewjong/swapnet      # the Docker image to run
+    bash -c \               # start the visdom server
+       "source activate swapnet \
+       && python -m visdom.server"  
+    ```
+5. Start an interactive shell in the Docker container we created (swapnet_env). All the 
+commands for training and inference can be run in this container.
+    ```bash
+    docker exec -it swapnet_env bash
+    ```
+6. Obtain the training data from the Dataset section. Note the data should be extracted
+to your host machine (outside Docker) under `${SWAPNET_REPO}/data`. This will automatically
+ reflect within the Docker container because of the command we ran in Step 4.
+
+To run the environment in the future, just repeat step 4 and 5.
+
+## Option 2: Manual Install
+
+
 I have only tested this build with Linux! If anyone wants to contribute instructions for Windows/MacOS, be my guest :)
 
 This repository is built with PyTorch. I recommend installing dependencies via [conda](https://docs.conda.io/en/latest/).
 
 With conda installed run:
 ```
+git clone https://github.com/andrewjong/SwapNet.git
 cd SwapNet/
 conda env create  # creates the conda environment from provided environment.yml
 conda activate swapnet
 ```
 Make sure this environment stays activated while you install the ROI library below!
 
-## Install ROI library (required)
+#### Install ROI library (required)
 I borrow the ROI (region of interest) library from [jwyang](https://github.com/jwyang/faster-rcnn.pytorch/tree/pytorch-1.0). This must be installed for this project to run. Essentially we must 1) compile the library, and 2) create a symlink so our project can find the compiled files.
 
 **1) Build the ROI library**
@@ -51,23 +113,28 @@ Note: symlinks on Linux tend to work best when you provide the full path.
 Data in this repository must start with the following:
 - `texture/` folder containing the original images. Images may be directly under this folder or in sub directories.
 
-The following must then be added from preprocessing(see the Preprocessing section below):
+The following must then be added from preprocessing (see the Preprocessing section below):
 - `body/` folder containing preprocessed body segmentations 
 - `cloth/` folder containing preprocessed cloth segmentations
 - `rois.csv` which contains the regions of interest for texture pooling
 - `norm_stats.json` which contain mean and standard deviation statistics for normalization
 
 ## Deep Fashion
-The dataset cited in the original paper is [DeepFashion: In-shop Clothes Retrieval](http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html). If you plan to preprocess the images yourself, download the images zip and move the image files under `data/deep_fashion/texture`.
+The dataset cited in the original paper is 
+[DeepFashion: In-shop Clothes Retrieval](http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html). 
+I've preprocessed the Deep Fashion image dataset already. The full preprocessed dataset 
+can be downloaded from [Google Drive](https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj).
+Extract the data to `${SWAPNET_REPO}/data/deep_fashion`.
 
-Alternatively, I've preprocessed the Deep Fashion image dataset already. The full preprocessed dataset can be downloaded here: https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj. If you want to use your own dataset, please follow the preprocessing instructions below while substituting "deep_fashion" for the name of your dataset.
+If don't plan to preprocess images yourself, jump ahead to the Training section.
 
-Otherwise, jump ahead to the Training section.
+Alternatively, if you plan to preprocess images yourself, download the original 
+DeepFashion image data and move the files to `${SWAPNET_REPO}/data/deep_fashion/texture`.
+Then follow the instructions below.
 
-## (Optional) Create Your Own Dataset
-If you'd like to take your own pictures, move the data into `data/YOUR_DATASET/texture`.
+## Preprocess Your Own Dataset (Optional)
+If you'd like to prepare your own images, move the data into `data/YOUR_DATASET/texture`.
 
-### Preprocessing
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
 
 #### Body Preprocessing
@@ -95,6 +162,7 @@ Run the following: `python util/calculate_imagedir_stats.py data/deep_fashion/bo
 # Training
 
 Train progress can be viewed by opening `localhost:8097` in your web browser.
+If you chose to install with Docker, run these commands in the Docker container.
 
 1) Train warp stage
 ```
@@ -171,10 +239,11 @@ Where SOURCE contains the clothing you want to transfer, and TARGET contains the
 - [ ] Test DRAGAN penalty and other advanced GAN losses
 
 # What's Next?
-I plan to keep improving virtual try-on in my own research project, and aim to release something by March or April 2020. (I've already made some progress which is scheduled to be published in the upcoming HPCS 2019 proceedings, but I aim to contribute more.) Stay tuned.
+I plan to keep improving virtual try-on in my own research project (I've already made some progress which is scheduled to be published in the upcoming HPCS 2019 proceedings, but I aim to contribute more.) Stay tuned.
 
 # Credits
 - The layout of this repository is strongly influenced by Jun-Yan Zhu's [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) repository, though I've implemented significant changes. Many thanks to their team for open sourcing their code.
 - Many thanks to Amit Raj, the main author of SwapNet, for patiently responding to my questions throughout the year.
 - Many thanks to Khiem Pham for his helpful experiments on the warp stage and contribution to this repository.
 - Thank you Dr. Teng-Sheng Moh for advising this project.
+- Thanks Urwa Muaz for [starting](https://github.com/andrewjong/SwapNet/pull/27) the Docker setup.
