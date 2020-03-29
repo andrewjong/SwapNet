@@ -10,23 +10,30 @@ RUN apt-get install -y curl
 
 WORKDIR /app/
 
+RUN echo "Installing and creating Miniconda environment..."
 # Install Miniconda
 RUN curl -so /miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
- && chmod +x /miniconda.sh \
- && /miniconda.sh -b -p /miniconda \
- && rm /miniconda.sh
-
-RUN git clone https://github.com/andrewjong/SwapNet.git
+	&& chmod +x /miniconda.sh \
+	&& /miniconda.sh -b -p /miniconda \
+	&& rm /miniconda.sh \
+	&& echo ". /miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
 
 ENV PATH=/miniconda/bin:$PATH
 
-RUN cd SwapNet && conda env create 
+RUN mkdir SwapNet 
+
+# Create the environment, set to activate automatically
+RUN cd SwapNet && \
+	wget https://raw.githubusercontent.com/andrewjong/SwapNet/master/environment.yml \
+	&& conda env create \
+	&& echo "source activate swapnet" >> ~/.bashrc
+
+# ROI Dependency
+RUN echo "Compiling ROI dependency..."
 
 RUN git clone https://github.com/jwyang/faster-rcnn.pytorch.git # clone to a SEPARATE project directory
 
 RUN  /bin/bash -c "source activate swapnet && cd faster-rcnn.pytorch && git checkout pytorch-1.0 && pip install -r requirements.txt"
-
-RUN echo "Compiling roi dependency"
 
 RUN  /bin/bash -c "source activate swapnet && cd faster-rcnn.pytorch/lib/pycocotools && wget https://raw.githubusercontent.com/muaz-urwa/temp_files/master/setup.py && python setup.py build_ext --inplace"
 
@@ -46,3 +53,4 @@ RUN /bin/bash -c "source activate swapnet && python -c 'import torch; print(torc
 # CUDA Home should not be none
 RUN /bin/bash -c "source activate swapnet && python -c 'import torch;from torch.utils.cpp_extension import CUDA_HOME; print(CUDA_HOME)'"
 
+RUN echo "Done!"
