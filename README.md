@@ -105,9 +105,9 @@ python setup.py build develop
 ```
 **2) Make a symlink back to this repository.**
 ```
-ln -s /path/to/faster-rcnn.pytorch/lib /path/to/swapnet-repo/lib
+ln -s /path/to/faster-rcnn.pytorch/lib ${SWAPNET_REPO}/lib
 ```
-Note: symlinks on Linux tend to work best when you provide the full path.
+Note: symlinks on Linux tend to work best when you provide the full path. Replace `${SWAPNET_REPO}` with the full path to wherever you cloned the repository to.
 
 # Dataset
 Data in this repository must start with the following:
@@ -126,6 +126,12 @@ I've preprocessed the Deep Fashion image dataset already. The full preprocessed 
 can be downloaded from [Google Drive](https://drive.google.com/open?id=1oGE23DCy06zu1cLdzBc4siFPyg4CQrsj).
 Extract the data to `${SWAPNET_REPO}/data/deep_fashion`.
 
+Next, create a file `${SWAPNET_REPO}/data/deep_fashion/normalization_stats.json`, and paste the following contents:
+```json
+{"path": "body", "means": [0.06484050184440379, 0.06718090599394404, 0.07127327572275131], "stds": [0.2088075459038679, 0.20012519201951368, 0.23498672043315685]}
+{"path": "texture", "means": [0.8319639705048438, 0.8105952930426163, 0.8038053056173073], "stds": [0.22878186598352074, 0.245635337367858, 0.2517315913036158]}
+```
+
 If don't plan to preprocess images yourself, jump ahead to the Training section.
 
 Alternatively, if you plan to preprocess images yourself, download the original 
@@ -133,7 +139,7 @@ DeepFashion image data and move the files to `${SWAPNET_REPO}/data/deep_fashion/
 Then follow the instructions below.
 
 ## Preprocess Your Own Dataset (Optional)
-If you'd like to prepare your own images, move the data into `data/YOUR_DATASET/texture`.
+If you'd like to prepare your own images, move the data into `${SWAPNET_REPO}/data/YOUR_DATASET/texture`.
 
 The images must be preprocessed into BODY and CLOTH segmentation representations. These will be input for training and inference.
 
@@ -143,7 +149,7 @@ Therefore, I instead use [Neural Body Fitting](https://arxiv.org/abs/1808.05942)
 
 1) Follow the instructions in my fork. You must follow the instructions under "Setup" and "How to run for SwapNet". Note NBF uses TensorFlow; I suggest using a separate conda environment for NBF's dependencies.
 
-2) Move the output under `data/deep_fashion/body/`, and the generated rois.csv file to `data/deep_fashion/rois.csv`.
+2) Move the output under `${SWAPNET_REPO}/data/deep_fashion/body/`, and the generated rois.csv file to `data/deep_fashion/rois.csv`.
 
 *Caveats:* neural body fitting appears to not do well on images that do not show the full body. In addition, the provided model seems it was only trained on one body type. I'm open to finding better alternatives.
 
@@ -152,7 +158,7 @@ The original paper used [LIP\_SSL](https://github.com/Engineering-Course/LIP_SSL
 
 1) Follow the installation instructions in the repository. Then follow the instructions under the "For SwapNet" section.
 
-2) Move the output under `data/deep_fashion/cloth/`
+2) Move the output under `${SWAPNET_REPO}/data/deep_fashion/cloth/`
 
 #### Calculate Normalization Statistics
 This calculates normalization statistics for the preprocessed body image segmentations, under `body/`, and original images, under `texture/`. The cloth segmentations do not need to be processed because they're read as 1-hot encoded labels.
