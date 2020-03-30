@@ -11,7 +11,7 @@ import torch
 from modules import pix2pix_modules, get_norm_layer
 
 sys.path.append("../lib")
-from model.roi_layers import ROIAlign
+from torchvision.ops import RoIAlign as ROIAlign
 from torch import nn
 
 from modules.layers import UNetDown, UNetUp, DualUNetUp, ResidualBlock
