@@ -13,15 +13,17 @@ I'd welcome help to improve the DevOps of this project. Unfortunately I have oth
 
 # Installation
 
-## Option 1: Install with Docker (Recommended)
+<details>
+<Summary> Option 1: Install with Docker </Summary>
+    
 Many thanks to Urwa Muaz for getting this started.
 
-It's recommended to install and run this code using [Docker](https://docs.docker.com/install/) 
+You can install and run this code using [Docker](https://docs.docker.com/install/) 
 (specifically community edition, Docker 19.03 or higher) and the provided Docker image.
 Docker enables sharing the same environment across different computers and operating 
 systems. This could save you a lot of setup headache; however, there is some developer
 overhead because you have to interact through Docker. If you prefer to build without 
-Docker, skip to Option 2: Manual Install. Otherwise, follow the instructions below.
+Docker, skip to Option 2: Conda Install. Otherwise, follow the instructions below.
 
 
 1. Clone this repo to your computer.
@@ -69,8 +71,10 @@ to your host machine (outside Docker) under `${SWAPNET_REPO}/data`. This will au
  reflect within the Docker container because of the command we ran in Step 4.
 
 To run the environment in the future, just repeat step 4 and 5.
+</details>
 
-## Option 2: Manual Install
+<details>
+<summary> Option 2: Conda Install </summary>
 
 
 I have only tested this build with Linux! If anyone wants to contribute instructions for Windows/MacOS, be my guest :)
@@ -108,6 +112,8 @@ python setup.py build develop
 ln -s /path/to/faster-rcnn.pytorch/lib ${SWAPNET_REPO}/lib
 ```
 Note: symlinks on Linux tend to work best when you provide the full path. Replace `${SWAPNET_REPO}` with the full path to wherever you cloned the repository to.
+
+</details>
 
 # Dataset
 Data in this repository must start with the following:
