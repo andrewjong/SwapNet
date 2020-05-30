@@ -21,7 +21,7 @@ Many thanks to Urwa Muaz for getting this started.
 You can install and run this code using [Docker](https://docs.docker.com/install/) 
 (specifically community edition, Docker 19.03 or higher) and the provided Docker image.
 Docker enables sharing the same environment across different computers and operating 
-systems. This could save you a lot of setup headache; however, there is some developer
+systems. This could save you some setup headache; however, there is some developer
 overhead because you have to interact through Docker. If you prefer to build without 
 Docker, skip to Option 2: Conda Install. Otherwise, follow the instructions below.
 
@@ -88,30 +88,6 @@ cd SwapNet/
 conda env create  # creates the conda environment from provided environment.yml
 conda activate swapnet
 ```
-Make sure this environment stays activated while you install the ROI library below!
-
-#### Install ROI library (required)
-I borrow the ROI (region of interest) library from [jwyang](https://github.com/jwyang/faster-rcnn.pytorch/tree/pytorch-1.0). This must be installed for this project to run. Essentially we must 1) compile the library, and 2) create a symlink so our project can find the compiled files.
-
-**1) Build the ROI library**
-```
-cd ..  # move out of the SwapNet project
-git clone https://github.com/jwyang/faster-rcnn.pytorch.git # clone to a SEPARATE project directory
-cd faster-rcnn.pytorch
-git checkout pytorch-1.0
-pip install -r requirements.txt
-cd lib/pycocotools
-```
-Important: now COMPLETE THE INSTRUCTIONS [HERE](https://github.com/jwyang/faster-rcnn.pytorch/issues/402#issuecomment-448485129)!!
-```
-cd ..  # go back to the lib folder
-python setup.py build develop
-```
-**2) Make a symlink back to this repository.**
-```
-ln -s /path/to/faster-rcnn.pytorch/lib ${SWAPNET_REPO}/lib
-```
-Note: symlinks on Linux tend to work best when you provide the full path. Replace `${SWAPNET_REPO}` with the full path to wherever you cloned the repository to.
 
 </details>
 
