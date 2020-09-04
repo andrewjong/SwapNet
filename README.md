@@ -1,3 +1,6 @@
+# STATUS AS OF SEPTEMBER 4 2020
+Hi all, thank you for your interest in my replication of this baseline! Since this repository seems to be generating a lot of traffic under issues, I just wanted to comment that I'm currently **not** able to maintain this repository. I'm working on a separate virtual try-on publication+codebase which I hope to release by next month (October). I welcome and will merge good PRs, but I won't be able to resolve issues for the time being. Thanks for understanding!
+
 # SwapNet
 **Community PyTorch reproduction of SwapNet.**
 
