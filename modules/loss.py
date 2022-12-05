@@ -74,7 +74,7 @@ class GANLoss(nn.Module):
         if normal:
             return torch.randn(1) * (high - low) + low
         else:
-            return torch.rand(1) * (high - low) + low
+            return torch.rand(1, device=torch.device('cuda:0')) * (high - low) + low
 
     def get_target_tensor(self, prediction, target_is_real):
         """Create label tensors with the same size as the input.
